@@ -722,6 +722,7 @@ static void generate_call_with_args(FILE* output, EsIRValue* operands, int opera
 
             fprintf(output, "    cvtsi2sd xmm0, rax\n");
         }
+        generate_call(output, func_name, arg_count);
     } else if (strcmp(func_name, "print_string") == 0 && arg_count >= 1) {
         EsIRValue* arg = &operands[1];
         #ifdef DEBUG
@@ -759,6 +760,7 @@ static void generate_call_with_args(FILE* output, EsIRValue* operands, int opera
             #endif
             fprintf(output, "    mov rcx, rax\n");
         }
+        generate_call(output, func_name, arg_count);
     } else {
 
         for (int i = 0; i < arg_count && i < 4; i++) {
