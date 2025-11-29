@@ -1,0 +1,56 @@
+{
+  "project": {
+    "name": "E# Builder",
+    "output": "e_sharp"
+  },
+  "directories": {
+    "source": "src",
+    "objects": "obj",
+    "binary": "bin",
+    "include": [
+      "src"
+    ]
+  },
+  "compiler": {
+    "cc": "gcc",
+    "alternatives": [
+      "gcc",
+      "clang"
+    ],
+    "standard": "c99",
+    "debug_flags": [
+      "-g",
+      "-DDEBUG",
+      "-DES_DEBUG_VERBOSE",
+      "-Wall",
+      "-Wextra"
+    ],
+    "release_flags": [
+      "-O2",
+      "-DNDEBUG",
+      "-Wno-unused-parameter"
+    ],
+    "extra_flags": [],
+    "defines": [],
+    "libraries": []
+  },
+  "build": {
+    "max_workers": 4,
+    "timeout": 60,
+    "incremental": true,
+    "auto_detect_sources": true,
+    "source_extensions": [
+      ".c"
+    ],
+    "header_extensions": [
+      ".h"
+    ],
+    "exclude_patterns": []
+  },
+  "features": {
+    "colored_output": true,
+    "progress_bar": true,
+    "build_statistics": true,
+    "dependency_tracking": true
+  }
+}

@@ -1,0 +1,44 @@
+#ifndef ES_PARALLEL_COMPILER_H
+#define ES_PARALLEL_COMPILER_H
+
+#include "../common/es_common.h"
+#include "../project/esproj.h"
+#include "../common/thread_pool.h"
+#include <pthread.h>
+
+typedef struct CompileTask {
+    char* input_file;
+    char* output_file;
+    int target_type;
+    int show_ir;
+    int result;
+    char* error_message;
+    double duration;
+} CompileTask;
+
+typedef struct ParallelCompiler {
+    ThreadPool* thread_pool;
+    CompileTask** tasks;
+    int task_count;
+    int max_threads;
+    pthread_mutex_t result_mutex;
+    int any_failed;
+    struct {
+        int total_files;
+        int succeeded;
+        int failed;
+        double total_time;
+    } stats;
+} ParallelCompiler;
+
+ParallelCompiler* parallel_compiler_create(int max_threads);
+void parallel_compiler_destroy(ParallelCompiler* compiler);
+int parallel_compiler_add_file(ParallelCompiler* compiler, const char* input_file, const char* output_file, int target_type, int show_ir);
+int parallel_compiler_execute(ParallelCompiler* compiler);
+
+void parallel_compiler_get_stats(ParallelCompiler* compiler, int* total, int* succeeded, int* failed);
+
+
+int parallel_compiler_link_results(ParallelCompiler* compiler, const char* final_output);
+
+#endif
