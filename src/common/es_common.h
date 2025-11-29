@@ -4,6 +4,11 @@
 #define _POSIX_C_SOURCE 200809L
 #define _GNU_SOURCE
 
+#include <stdio.h>
+#include <time.h>
+#include <stdarg.h>
+#include <string.h>
+
 #define ES_VERSION_MAJOR 1
 #define ES_VERSION_MINOR 0
 #define ES_VERSION_PATCH 0
@@ -12,11 +17,6 @@
 
 #ifdef DEBUG
     #define ES_DEBUG_ENABLED 1
-
-    #include <stdio.h>
-#include <time.h>
-#include <stdarg.h>
-#include <string.h>
 
 #ifdef _WIN32
     #include <windows.h>
