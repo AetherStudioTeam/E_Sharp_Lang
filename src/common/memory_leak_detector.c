@@ -1,3 +1,4 @@
+#include "../common/es_common.h"
 #include "memory_leak_detector.h"
 #include <stdio.h>
 #include <stdlib.h>

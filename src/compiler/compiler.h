@@ -1,10 +1,10 @@
 #ifndef ES_COMPILER_H
 #define ES_COMPILER_H
 
+#include "../common/es_common.h"
 #include <stdio.h>
 #include "../parser/ast_nodes.h"
 #include "ir.h"
-#include "../common/es_common.h"
 
 
 #define ES_DEBUG_IR(fmt, ...) ES_DEBUG_LOG("IR", fmt, ##__VA_ARGS__)
