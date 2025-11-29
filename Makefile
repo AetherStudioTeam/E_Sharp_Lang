@@ -71,13 +71,11 @@ $(BUILD_DIR)/%.o: %.c
 $(TARGET_FINAL): $(OBJECTS)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
-release:
-	@$(MKDIR) $(BUILD_DIR) 2>/dev/null || true
-	$(MAKE) DEBUG=0
+release: $(TARGET_FINAL)
+	@echo "Release build completed: $(TARGET_FINAL)"
 
-debug:
-	@$(MKDIR) $(BUILD_DIR) 2>/dev/null || true
-	$(MAKE) DEBUG=1
+debug: $(TARGET_FINAL)
+	@echo "Debug build completed: $(TARGET_FINAL)"
 
 clean:
 ifeq ($(OS),Windows_NT)
