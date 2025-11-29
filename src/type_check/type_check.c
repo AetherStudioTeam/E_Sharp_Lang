@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "type_check.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -2215,6 +2216,7 @@ int type_check_statement(TypeCheckContext* context, ASTNode* statement) {
 
 
                 AccessModifier access = token_to_access_modifier(statement->data.access_modifier.access_modifier);
+                (void)access;
 
 
                 ASTNode* member = statement->data.access_modifier.member;

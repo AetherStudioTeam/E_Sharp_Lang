@@ -58,6 +58,7 @@
     #define ES_COLOR_WHITE   "\033[37m"
 #else
     #include <unistd.h>
+    #include <time.h>
     #define ES_COLOR_RESET   "\033[0m"
     #define ES_COLOR_RED     "\033[31m"
     #define ES_COLOR_GREEN   "\033[32m"
@@ -93,6 +94,8 @@
         struct tm* tm_info = localtime(&ts.tv_sec);
         char timestamp[32];
         strftime(timestamp, sizeof(timestamp), "%H:%M:%S", tm_info);
+        
+        (void)ts;
 
         const char* color = ES_COLOR_WHITE;
         const char* level_str = "TRACE";

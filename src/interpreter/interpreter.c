@@ -393,7 +393,7 @@ static double interpreter_evaluate_expression(Interpreter* interpreter, ASTNode*
                     if (arg->type == AST_STRING) {
                     } else {
                         double value = interpreter_evaluate_expression(interpreter, arg);
-
+                        (void)value;
                     }
                     if (i < expr->data.call.argument_count - 1) {
                     }
