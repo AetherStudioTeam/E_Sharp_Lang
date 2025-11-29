@@ -1,10 +1,10 @@
+#include "../common/es_common.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include "lexer.h"
 #include "accelerator.h"
-#include "../common/es_common.h"
 
 typedef struct {
     const char* word;
