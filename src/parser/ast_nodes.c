@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "ast_nodes.h"
 #include "accelerator.h"
 #include "../common/es_common.h"

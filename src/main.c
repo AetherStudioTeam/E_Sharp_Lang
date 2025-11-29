@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+#define _POSIX_C_SOURCE 200809L
 #include "common/es_common.h"
 #include "common/output_cache.h"
 #include "compiler/compiler.h"
@@ -12,7 +14,6 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
-#define _GNU_SOURCE
 
 
 #define ANSI_CURSOR_UP "\033[F"

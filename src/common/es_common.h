@@ -12,7 +12,7 @@
 
 #ifdef DEBUG
     #define ES_DEBUG_ENABLED 1
-
+    #define _POSIX_C_SOURCE 200809L
 
     #include <stdio.h>
 #include <time.h>
@@ -57,6 +57,7 @@
     #define ES_COLOR_CYAN    "\033[36m"
     #define ES_COLOR_WHITE   "\033[37m"
 #else
+    #define _POSIX_C_SOURCE 200809L
     #include <unistd.h>
     #include <time.h>
     #define ES_COLOR_RESET   "\033[0m"

@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "esproj.h"
 #include <time.h>
 #include <errno.h>
