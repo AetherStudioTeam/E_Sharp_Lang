@@ -15,6 +15,15 @@ E#是一个由初中生团队独立研发的编程语言，目标是解决部分
 ```
 进行编译
 编译完成后,你可以在bin目录下找到编译好的e_sharp.exe文件，这是一个cli控制台程序
+linux用户？可以通过我们的另外的构建脚本进行编译
+```bash
+python build.py
+```
+release版本同理,你可以通过：
+```bash
+python build.py --release
+```
+进行编译
 
 # 提交pr
 当你完成了某个功能或修复了某个bug,你可以提交一个pull request到我们的仓库,我们会 review 你的代码并合并到主分支中

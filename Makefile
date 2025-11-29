@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -std=c99 -Wall -Wextra -O2 -Isrc
+CFLAGS = -std=c99 -Wall -Wextra -O2 -Isrc -D_GNU_SOURCE -D_DEFAULT_SOURCE
 LDFLAGS = 
 
 DEBUG ?= 0

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define _GNU_SOURCE
 
 
 void* es_malloc_checked(size_t size, const char* file, int line) {

@@ -5,6 +5,8 @@
 #include <windows.h>
 #include <direct.h>
 #define mkdir _mkdir
+#else
+#include <time.h>
 #endif
 
 double es_time_now_seconds(void) {

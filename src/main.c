@@ -12,6 +12,7 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#define _GNU_SOURCE
 
 
 #define ANSI_CURSOR_UP "\033[F"
@@ -274,7 +275,6 @@ static void es_print_build_summary(void) {
 }
 static void es_print_cli_header(void) {
     const char* bold = es_color(ES_COL_BOLD);
-    const char* cyan = es_color(ES_COL_CYAN);
     const char* reset = es_color(ES_COL_RESET);
 
 
@@ -373,6 +373,7 @@ void es_show_idle_status(void) {
 }
 
 void es_print_usage(const char* program_name) {
+    (void)program_name;
     ES_INFO("E# 编译器 || 使用说明");
     es_printf("  -o, --output <文件名>    指定输出文件名 (默认: output.asm 或 a.exe)\n");
     es_printf("  -t, --target <类型>      指定目标类型: asm, ir, exe (默认: asm)\n");

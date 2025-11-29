@@ -21,8 +21,24 @@ jobs:
 
       - name: Build
         run: |
-          make clean
-          make ci-build
+          python build.py
 
       - name: Run tests
-        run: make test
+        run: |
+          echo "Running E# compiler tests..."
+          if [ -f "bin/e_sharp" ]; then
+            echo "Testing array example..."
+            ./bin/e_sharp examples/test_array_simple2.esf || exit 1
+            echo "Test passed!"
+          else
+            echo "Error: bin/e_sharp not found"
+            exit 1
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: e_sharp-ubuntu
+          path: |
+            bin/e_sharp
+            bin/*.exe

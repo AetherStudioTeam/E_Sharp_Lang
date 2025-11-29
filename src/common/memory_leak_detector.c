@@ -104,6 +104,9 @@ void es_record_allocation(void* ptr, size_t size, const char* file, int line,
 
 
 void es_record_deallocation(void* ptr, const char* file, int line, const char* function) {
+    (void)file;
+    (void)line;
+    (void)function;
     if (!ES_LEAK_DETECTION_ENABLED || !g_memory_leak_detector.enabled || !ptr) return;
 
 
