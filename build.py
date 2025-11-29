@@ -59,7 +59,7 @@ class BuildConfig:
             "release_flags": ["-O2", "-DNDEBUG", "-pthread"],
             "extra_flags": [],
             "defines": [],
-            "libraries": ["pthread"]
+            "libraries": ["pthread", "m"]
         },
         "build": {
             "max_workers": 4,
