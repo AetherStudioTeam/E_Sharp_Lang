@@ -32,11 +32,31 @@ jobs:
       - name: Run tests
         run: |
           echo "Running E# compiler tests..."
+          echo 'function main() {' > test.esf
+          echo '    print("Hello, E# World!");' >> test.esf
+          echo '    print("Compiler test successful!");' >> test.esf
+          echo '    return 0;' >> test.esf
+          echo '}' >> test.esf
+          echo "Testing basic compilation..."
           if [ -f "bin/e_sharp" ]; then
-            echo "Testing array example..."
-            ./bin/e_sharp examples/test_array_simple2.esf || exit 1
-            echo "Test passed!"
+            echo "Created test file: test.esf"
+            cat test.esf
+            echo "Testing E# compiler basic compilation..."
+            ./bin/e_sharp test.esf || exit 1
+            echo "Testing E# compiler executable generation for Linux x86..."
+            ./bin/e_sharp -t exe test.esf -o test_linux || exit 1
+            if [ -f "test_linux" ]; then
+              echo "Linux executable generated successfully!"
+              chmod +x test_linux
+              echo "Running generated Linux executable..."
+              ./test_linux || exit 1
+              echo "All tests passed!"
+            else
+              echo "Error: Linux executable not generated"
+              exit 1
+            fi
           else
             echo "Error: bin/e_sharp not found"
+            ls -la bin/
             exit 1
           fi

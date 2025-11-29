@@ -644,7 +644,11 @@ int es_compile_file(const char* input_file, const char* output_file, EsTargetTyp
 
 
         char asm_cmd[1024];
+#ifdef _WIN32
         int asm_cmd_len = snprintf(asm_cmd, sizeof(asm_cmd), "nasm -f win64 %s -o %s", temp_asm_file, temp_obj_file);
+#else
+        int asm_cmd_len = snprintf(asm_cmd, sizeof(asm_cmd), "nasm -f elf64 %s -o %s", temp_asm_file, temp_obj_file);
+#endif
         if (asm_cmd_len < 0 || (size_t)asm_cmd_len >= sizeof(asm_cmd)) {
             ES_ERROR("汇编命令字符串过长");
             es_task_report("assemble", stage_file, ES_TASK_RESULT_FAILED, es_time_now_seconds() - stage_start, &stats);
@@ -661,7 +665,11 @@ int es_compile_file(const char* input_file, const char* output_file, EsTargetTyp
         stage_start = es_time_now_seconds();
 
         char link_cmd[1024];
+#ifdef _WIN32
         int link_cmd_len = snprintf(link_cmd, sizeof(link_cmd), "gcc %s obj/compiler/runtime.o obj/common/output_cache.o -o %s -mconsole", temp_obj_file, output_file);
+#else
+        int link_cmd_len = snprintf(link_cmd, sizeof(link_cmd), "gcc %s obj/compiler/runtime.o obj/common/output_cache.o -o %s -lm -lpthread", temp_obj_file, output_file);
+#endif
         if (link_cmd_len < 0 || (size_t)link_cmd_len >= sizeof(link_cmd)) {
             ES_ERROR("链接命令字符串过长");
             es_task_report("link", stage_file, ES_TASK_RESULT_FAILED, es_time_now_seconds() - stage_start, &stats);
@@ -863,7 +871,11 @@ int main(int argc, char* argv[]) {
         char resolved_output[ES_MAX_PATH] = {0};
         const char* output_path = options.output_file;
         if (!output_path || output_path[0] == '\0') {
+#ifdef _WIN32
             const char* extension = (project->type == ES_PROJ_TYPE_LIBRARY) ? ".lib" : ".exe";
+#else
+            const char* extension = (project->type == ES_PROJ_TYPE_LIBRARY) ? ".lib" : "";
+#endif
             char bin_dir[ES_MAX_PATH];
             main_path_join(bin_dir, sizeof(bin_dir), project_root, "bin");
             es_ensure_directory_recursive(bin_dir);
@@ -973,7 +985,11 @@ int main(int argc, char* argv[]) {
 
 
             char link_cmd[1024];
+#ifdef _WIN32
             int link_cmd_len = snprintf(link_cmd, sizeof(link_cmd), "gcc obj/*.obj obj/compiler/runtime.o obj/common/output_cache.o -o %s -mconsole", output_path);
+#else
+            int link_cmd_len = snprintf(link_cmd, sizeof(link_cmd), "gcc obj/*.obj obj/compiler/runtime.o obj/common/output_cache.o -o %s -lm -lpthread", output_path);
+#endif
             if (link_cmd_len < 0 || (size_t)link_cmd_len >= sizeof(link_cmd)) {
                 ES_ERROR("链接命令字符串过长");
                 parallel_compiler_destroy(parallel_compiler);
@@ -1002,7 +1018,11 @@ int main(int argc, char* argv[]) {
     }
     if (options.output_file == NULL) {
         if (options.target_type == ES_TARGET_CMD_EXE) {
+#ifdef _WIN32
             options.output_file = "a.exe";
+#else
+            options.output_file = "a";
+#endif
         } else if (options.target_type == ES_TARGET_CMD_IR) {
             options.output_file = "output.ir";
         } else {
