@@ -553,7 +553,6 @@ static void generate_call(FILE* output, const char* func_name, int arg_count) {
     #ifdef ES_DEBUG_VERBOSE
         #endif
     #endif
-    // On Linux, runtime functions don't have underscore prefix
     if (func_name[0] == '_') {
         fprintf(output, "    call %s\n", func_name + 1);
     } else {
