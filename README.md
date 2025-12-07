@@ -16,7 +16,7 @@ E#官网:[E# WS](https://es.aetstudio.xyz/)
 ```
 进行编译
 编译完成后,你可以在bin目录下找到编译好的e_sharp.exe文件，这是一个cli控制台程序
-linux用户？可以通过我们的另外的构建脚本进行编译
+# linux用户？可以通过我们的另外的构建脚本进行编译
 ```bash
 python build.py
 ```
