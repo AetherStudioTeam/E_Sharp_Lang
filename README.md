@@ -1,6 +1,7 @@
 # E#----编程语言
 E#是一个由初中生团队独立研发的编程语言，目标是解决部分c sharp痛点
 我们的文档：[esdocs.md](esdocs.md) [esdocs2.0.md](esdocs2.0.md) （当然由于一些原因，这俩文档是ai编写的，绝对不是因为我们爱偷懒）
+E#官网:[E# WS](https://es.aetstudio.xyz/)
 
 
 # 快速开始
