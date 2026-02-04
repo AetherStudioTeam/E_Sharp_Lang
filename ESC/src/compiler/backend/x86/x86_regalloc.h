@@ -1,0 +1,112 @@
+
+
+
+#ifndef X86_REGALLOC_H
+#define X86_REGALLOC_H
+
+#include "x86_codegen.h"
+
+
+#define MAX_INSTS 10000
+
+
+
+
+
+
+typedef struct {
+    unsigned char bits[32];  
+} LiveSet;
+
+
+typedef struct {
+    LiveSet use;      
+    LiveSet def;      
+    LiveSet live_in;  
+    LiveSet live_out; 
+} BlockLiveInfo;
+
+
+typedef struct {
+    BlockLiveInfo* block_info;  
+    int block_count;
+    LiveSet* inst_live;         
+    int inst_count;
+} LivenessAnalysis;
+
+
+LivenessAnalysis* liveness_analysis_create(EsIRFunction* func);
+void liveness_analysis_destroy(LivenessAnalysis* analysis);
+void liveness_analysis_run(LivenessAnalysis* analysis, EsIRFunction* func);
+int liveness_is_live(LiveSet* set, int temp_idx);
+void liveness_add(LiveSet* set, int temp_idx);
+void liveness_remove(LiveSet* set, int temp_idx);
+void liveness_union(LiveSet* result, LiveSet* a, LiveSet* b);
+
+
+
+
+
+
+struct ConflictNodeStruct;
+typedef struct ConflictNodeStruct ConflictNode;
+
+
+struct ConflictNodeStruct {
+    int temp_idx;           
+    int degree;             
+    int color;              
+    int is_spilled;         
+    int stack_offset;       
+    ConflictNode** neighbors;  
+    int neighbor_count;
+    int neighbor_capacity;
+};
+
+
+typedef struct {
+    ConflictNode* nodes[256];  
+    int node_count;
+} ConflictGraph;
+
+ConflictGraph* conflict_graph_create(void);
+void conflict_graph_destroy(ConflictGraph* graph);
+void conflict_graph_build(ConflictGraph* graph, LivenessAnalysis* liveness, EsIRFunction* func);
+void conflict_graph_add_edge(ConflictGraph* graph, int temp_a, int temp_b);
+int conflict_graph_are_conflicting(ConflictGraph* graph, int temp_a, int temp_b);
+
+
+
+
+
+
+
+
+
+#define NUM_ALLOCABLE_REGS 2
+static const char* g_allocable_regs[NUM_ALLOCABLE_REGS] = {
+    "r10", "r11"
+};
+
+
+typedef struct {
+    int temp_to_reg[256];      
+    int temp_to_stack[256];    
+    int num_spilled;           
+    int stack_space_needed;    
+} RegAllocResult;
+
+
+RegAllocResult* regalloc_allocate(ConflictGraph* graph);
+void regalloc_result_destroy(RegAllocResult* result);
+const char* regalloc_get_reg_name(RegAllocResult* result, int temp_idx);
+int regalloc_get_stack_offset(RegAllocResult* result, int temp_idx);
+
+
+
+
+
+
+RegAllocResult* x86_allocate_registers(EsIRFunction* func);
+
+#endif

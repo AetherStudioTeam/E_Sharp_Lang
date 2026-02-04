@@ -1,0 +1,12 @@
+Test/
+Tool/
+build/
+obj/
+LINKER-LIB/
+DEV-DOC/
+.trae/
+.idea/
+.gitignore
+*.txt
+*.md
+docs/
