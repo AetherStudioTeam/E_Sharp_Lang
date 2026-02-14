@@ -26,21 +26,21 @@
 
 **E#** 是一个由 **Aether Studio** 开发的现代系统级编程语言，专为追求极致性能与优雅语法的开发者而生。
 
-> 🎯 **我们的愿景**：打造一款兼具 C++ 性能、C# 优雅、Rust 安全的编程语言，让系统编程变得简单而强大。
+> **我们的愿景**：打造一款兼具 C++ 性能(但目前仅在部分领域上赶超)、C# 优雅、Rust 安全(当前阶段尚未实现)的编程语言，让系统编程变得简单而强大。
 
 ### 为什么选择 E#？
 
 | 特性 | 描述 |
 |------|------|
-| ⚡ **极致性能** | 自研编译器 toolchain，零成本抽象，编译速度极快 |
-| 🎨 **优雅语法** | 基于 C# 语法扩展，学习曲线平缓，表达能力强大 |
-| 🔧 **自研工具链** | 独立实现的前端、SSA 形式的 IR 及多目标后端代码生成 |
-| 🏗️ **现代架构** | 模块化设计，支持增量编译和并行构建 |
-| 🔒 **类型安全** | 静态类型系统，编译期捕获错误 |
+| **极致性能** | 自研编译器 toolchain，零成本抽象，编译速度极快 |
+| **优雅语法** | 基于 C# 语法扩展，学习曲线平缓，表达能力强大 |
+| **自研工具链** | 独立实现的前端、SSA 形式的 IR 及多目标后端代码生成 |
+| **现代架构** | 模块化设计，支持增量编译和并行构建 |
+| **类型安全** | 静态类型系统，编译期捕获错误 |
 
 ---
 
-## 📸 预览
+## 预览
 
 ```csharp
 // E# 代码示例
@@ -158,7 +158,7 @@ E_Sharp_Lang/
 
 ---
 
-## 🛠️ 技术特性
+## 技术特性
 
 ### 编译器 (ESC)
 
@@ -214,15 +214,15 @@ E_Sharp_Lang/
 - 新增功能请附带测试用例
 - 遵循现有代码风格
 
-📋 [查看贡献指南](./CONTRIBUTING.md)
+[查看贡献指南](./CONTRIBUTING.md)
 
-🐛 [提交 Bug 报告](https://github.com/AetherStudioTeam/E_Sharp_Lang/issues/new?template=bug_report.md)
+[提交 Bug 报告](https://github.com/AetherStudioTeam/E_Sharp_Lang/issues/new?template=bug_report.md)
 
-💡 [提交功能建议](https://github.com/AetherStudioTeam/E_Sharp_Lang/issues/new?template=feature_request.md)
+[提交功能建议](https://github.com/AetherStudioTeam/E_Sharp_Lang/issues/new?template=feature_request.md)
 
 ---
 
-## 📜 许可证
+## 许可证
 
 本项目采用 [MIT License](LICENSE) 开源。
 
@@ -244,29 +244,29 @@ copies or substantial portions of the Software.
 
 ---
 
-## 🔗 相关项目
+## 相关项目
 
 - [LumenCode](https://github.com/AetherStudioTeam/LumenCode) - 非商业音游项目
 - [RedstLauncher](https://github.com/AetherStudioTeam/RedstLauncher) - Minecraft 启动器
 
 ---
 
-## 📞 联系我们
+## 联系我们
 
 <div align="center">
 
 | 渠道 | 链接 |
 |------|------|
-| 📧 邮箱 | [AetherStudio@qq.com](mailto:AetherStudio@qq.com) |
-| 💬 QQ 群 | [791809691](https://jq.qq.com/?_wv=1027&k=xxxxxx) |
-| 🌐 官网 | [https://es.aetstudio.xyz/](https://es.aetstudio.xyz/) |
-| 🐙 GitHub | [https://github.com/AetherStudioTeam/E_Sharp_Lang](https://github.com/AetherStudioTeam/E_Sharp_Lang) |
+| 邮箱 | [AetherStudio@qq.com](mailto:AetherStudio@qq.com) |
+| QQ 群 | [791809691](https://jq.qq.com/?_wv=1027&k=xxxxxx) |
+| 官网 | [https://es.aetstudio.xyz/](https://es.aetstudio.xyz/) |
+| GitHub | [https://github.com/AetherStudioTeam/E_Sharp_Lang](https://github.com/AetherStudioTeam/E_Sharp_Lang) |
 
 </div>
 
 ---
 
-## 🙏 致谢
+## 致谢
 
 ### 技术参考
 
@@ -287,7 +287,7 @@ copies or substantial portions of the Software.
 
 <div align="center">
 
-### ⭐ 如果这个项目对你有帮助，请给我们一颗星！
+### 如果这个项目对你有帮助，请给我们一颗星！
 
 **Made with ❤️ by Aether Studio**
 
