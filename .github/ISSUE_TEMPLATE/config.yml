@@ -1,13 +1,13 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 💬 提问和讨论
+  - name: 提问和讨论
     url: https://github.com/AetherStudioTeam/E_Sharp_Lang/discussions
     about: 如果你有使用问题或想进行一般性讨论，请使用 Discussions
   
-  - name: 🌐 访问官网
+  - name: 访问官网
     url: https://es.aetstudio.xyz/
     about: 查看官方文档和示例
   
-  - name: 📧 联系团队
+  - name: 联系团队
     url: mailto:AetherStudio@qq.com
     about: 通过邮件联系 Aether Studio 团队
