@@ -128,7 +128,7 @@ LspSymbolList* lsp_document_symbols(const char* content, const char* uri) {
     ASTNode* ast = parser_parse(parser);
     if (ast) {
         extract_symbols_from_ast(ast, uri, list, 0);
-        ast_destroy(ast);
+        ast_destroy_node(ast);
     }
     
     parser_destroy(parser);
@@ -245,7 +245,7 @@ LspSymbolInfo* lsp_find_symbol_definition(const char* content, const char* symbo
     
     
     
-    ast_destroy(ast);
+    ast_destroy_node(ast);
     parser_destroy(parser);
     lexer_destroy(lexer);
     

@@ -116,7 +116,7 @@ LspDiagnosticList* lsp_analyze_document(const char* uri, const char* content) {
                 
                 symbol_table_destroy(sym_table);
             }
-            ast_destroy(ast);
+            ast_destroy_node(ast);
         }
         parser_destroy(parser);
     }
@@ -257,7 +257,7 @@ char* lsp_get_hover_info(const char* content, int line, int col) {
                 ASTNode* ast = parser_parse(parser);
                 if (ast) {
                     
-                    ast_destroy(ast);
+                    ast_destroy_node(ast);
                 }
                 parser_destroy(parser);
             }
@@ -354,7 +354,7 @@ LspLocation* lsp_get_definition(const char* content, int line, int col) {
                 
                 
                 
-                ast_destroy(ast);
+                ast_destroy_node(ast);
             }
             parser_destroy(parser);
         }

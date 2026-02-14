@@ -95,7 +95,7 @@ static void emit_load_string_addr_to_reg(EOCodegenContext* ctx, int32_t sym_idx,
     emit_u64(ctx, 0); 
     
     
-    eo_add_reloc(ctx->writer, EO_SEC_CODE, offset, sym_idx, EO_RELOC_ABS64, 0);
+    eo_add_reloc(ctx->writer, EO_SEC_TEXT, offset, sym_idx, EO_RELOC_ABS64, 0);
 }
 
 
@@ -143,7 +143,7 @@ static void emit_call_external(EOCodegenContext* ctx, const char* func_name) {
     emit_u32(ctx, 0);  
 
     
-    eo_add_reloc(ctx->writer, EO_SEC_CODE, call_offset + 1, sym_idx, EO_RELOC_REL32, -4);
+    eo_add_reloc(ctx->writer, EO_SEC_TEXT, call_offset + 1, sym_idx, EO_RELOC_PC32, (uint16_t)(-4));
 }
 
 
@@ -226,7 +226,7 @@ static void eo_generate_instruction(EOCodegenContext* ctx, EsIRInst* inst) {
                             if (sym_idx < 0) {
                                 uint32_t off = eo_get_rodata_offset(ctx->writer);
                                 eo_write_rodata(ctx->writer, "\0", 1);
-                                sym_idx = eo_add_symbol(ctx->writer, "empty_str", EO_SYM_CONSTANT, EO_SEC_RODATA, off, 0);
+                                sym_idx = eo_add_symbol(ctx->writer, "empty_str", EO_SYM_OBJECT, EO_BIND_LOCAL, EO_SEC_RODATA, off);
                             }
                         }
                         emit_load_string_addr_to_reg(ctx, sym_idx, target_reg);
@@ -308,7 +308,7 @@ static void eo_generate_function(EOCodegenContext* ctx, EsIRFunction* func) {
     uint32_t func_offset = eo_get_code_offset(ctx->writer);
 
     
-    eo_add_symbol(ctx->writer, func->name, EO_SYM_FUNCTION, EO_SEC_CODE, func_offset, 0);
+    eo_add_symbol(ctx->writer, func->name, EO_SYM_FUNC, EO_BIND_GLOBAL, EO_SEC_TEXT, func_offset);
 
     
     if (strcmp(func->name, "main") == 0) {
@@ -362,7 +362,7 @@ static void eo_generate_data_section(EOCodegenContext* ctx, EsIRModule* module) 
             
             char sym_name[32];
             snprintf(sym_name, sizeof(sym_name), "str_const_%d", i);
-            ctx->string_const_sym_indices[i] = eo_add_symbol(ctx->writer, sym_name, EO_SYM_CONSTANT, EO_SEC_RODATA, rodata_offset, 0);
+            ctx->string_const_sym_indices[i] = eo_add_symbol(ctx->writer, sym_name, EO_SYM_OBJECT, EO_BIND_LOCAL, EO_SEC_RODATA, rodata_offset);
         }
     }
 

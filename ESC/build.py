@@ -228,9 +228,10 @@ class SourceScanner:
             self.source_dir = Path('vm')
     
     def should_exclude(self, filepath: Path) -> bool:
+        path_str = str(filepath).replace('\\', '/')
         name = filepath.name
         for pattern in self.exclude_patterns:
-            if fnmatch.fnmatch(name, pattern):
+            if fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(path_str, pattern):
                 return True
         return False
     
@@ -402,7 +403,7 @@ class Builder:
             with open(source_file, 'r', encoding='utf-8', errors='ignore') as f:
                 for line in f:
                     stripped = line.strip()
-                    if stripped.startswith('#include "'):
+                    if stripped.startswith('#include'):
                         parts = stripped.split('"')
                         if len(parts) >= 2:
                             header = parts[1]

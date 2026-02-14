@@ -69,7 +69,7 @@
     "header_extensions": [
       ".h"
     ],
-    "exclude_patterns": ["test_*.c", "*_test.c", "standalone/*.c", "test*.c"]
+    "exclude_patterns": ["test_*.c", "*_test.c", "**/standalone/*.c", "test*.c"]
   },
   "features": {
     "colored_output": true,

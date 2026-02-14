@@ -110,7 +110,7 @@ LspSignatureHelp* lsp_get_signature_help(const char* content, int line, int col)
                 }
                 help->signatures[0].documentation = strdup("Function");
                 
-                ast_destroy(ast);
+                ast_destroy_node(ast);
             }
             parser_destroy(parser);
         }

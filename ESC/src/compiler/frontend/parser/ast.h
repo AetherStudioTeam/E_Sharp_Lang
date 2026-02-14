@@ -84,6 +84,8 @@ typedef enum {
 
 typedef struct ASTNode {
     ASTNodeType type;
+    int line;
+    int col;
     union {
         double number_value;
         char* string_value;
@@ -392,8 +394,8 @@ typedef struct ASTNode {
     } data;
 } ASTNode;
 
-ASTNode* ast_create_node(ASTNodeType type);
-void ast_destroy(ASTNode* node);
+ASTNode* ast_create_node(ASTNodeType type, int line, int col);
+void ast_destroy_node(ASTNode* node);
 void ast_print(ASTNode* node, int indent);
 
 #endif

@@ -34,11 +34,11 @@ static ASTNode* parser_parse_static_function_declaration(Parser* parser);
 static ASTNode* parser_parse_function_declaration(Parser* parser);
 static ASTNode* parser_parse_ternary_operation(Parser* parser);
 static ASTNode* parser_parse_type_declaration(Parser* parser);
-static ASTNode* parser_parse_typed_function_declaration(Parser* parser, EsTokenType return_type, char* function_name, int is_static);
+static ASTNode* parser_parse_typed_function_declaration(Parser* parser, EsTokenType return_type, char* function_name, int is_static, int line, int col);
 static int parser_is_type_keyword(EsTokenType type);
 static int parser_parse_parameter_list(Parser* parser, char*** parameters, EsTokenType** parameter_types, int* parameter_count);
 static void parser_free_parameter_list(char** parameters, EsTokenType* parameter_types, int parameter_count);
-static ASTNode* parser_create_function_node(Parser* parser, int is_static, char* name, char** parameters, EsTokenType* parameter_types, int parameter_count, ASTNode* body, EsTokenType return_type);
+static ASTNode* parser_create_function_node(Parser* parser, int is_static, char* name, char** parameters, EsTokenType* parameter_types, int parameter_count, ASTNode* body, EsTokenType return_type, int line, int col);
 
 
 static ASTNode* parser_parse_property_declaration(Parser* parser, EsTokenType type, char* name, ASTNode** attributes, int attribute_count);
@@ -228,9 +228,11 @@ static ASTNode* parser_create_function_node(Parser* parser,
                                             EsTokenType* parameter_types,
                                             int parameter_count,
                                             ASTNode* body,
-                                            EsTokenType return_type) {
+                                            EsTokenType return_type,
+                                            int line,
+                                            int col) {
     ASTNode* node = ast_create_node(is_static ? AST_STATIC_FUNCTION_DECLARATION
-                                              : AST_FUNCTION_DECLARATION);
+                                              : AST_FUNCTION_DECLARATION, line, col);
     if (!node) {
         return NULL;
     }
@@ -273,28 +275,28 @@ static ASTNode* parser_parse_call(Parser* parser, ASTNode* callee) {
                     if (!arg) {
                         ES_FREE(param_name);
                         for (int i = 0; i < argument_count; i++) {
-                            ast_destroy(arguments[i]);
+                            ast_destroy_node(arguments[i]);
                             if (argument_names && argument_names[i]) {
                                 ES_FREE(argument_names[i]);
                             }
                         }
                         ES_FREE(arguments);
                         ES_FREE(argument_names);
-                        ast_destroy(callee);
+                        ast_destroy_node(callee);
                         return NULL;
                     }
                 } else {
                     arg = parser_parse_expression(parser);
                     if (!arg) {
                         for (int i = 0; i < argument_count; i++) {
-                            ast_destroy(arguments[i]);
+                            ast_destroy_node(arguments[i]);
                             if (argument_names && argument_names[i]) {
                                 ES_FREE(argument_names[i]);
                             }
                         }
                         ES_FREE(arguments);
                         ES_FREE(argument_names);
-                        ast_destroy(callee);
+                        ast_destroy_node(callee);
                         return NULL;
                     }
                 }
@@ -302,14 +304,14 @@ static ASTNode* parser_parse_call(Parser* parser, ASTNode* callee) {
                 arg = parser_parse_expression(parser);
                 if (!arg) {
                     for (int i = 0; i < argument_count; i++) {
-                        ast_destroy(arguments[i]);
+                        ast_destroy_node(arguments[i]);
                         if (argument_names && argument_names[i]) {
                             ES_FREE(argument_names[i]);
                         }
                     }
                     ES_FREE(arguments);
                     ES_FREE(argument_names);
-                    ast_destroy(callee);
+                    ast_destroy_node(callee);
                     return NULL;
                 }
             }
@@ -317,16 +319,16 @@ static ASTNode* parser_parse_call(Parser* parser, ASTNode* callee) {
             char** new_argument_names = (char**)ES_REALLOC(argument_names, (argument_count + 1) * sizeof(char*));
             if (!new_arguments || !new_argument_names) {
                 ES_FREE(param_name);
-                ast_destroy(arg);
+                ast_destroy_node(arg);
                 for (int i = 0; i < argument_count; i++) {
-                    ast_destroy(arguments[i]);
+                    ast_destroy_node(arguments[i]);
                     if (argument_names && argument_names[i]) {
                         ES_FREE(argument_names[i]);
                     }
                 }
                 ES_FREE(arguments);
                 ES_FREE(argument_names);
-                ast_destroy(callee);
+                ast_destroy_node(callee);
                 return NULL;
             }
             arguments = new_arguments;
@@ -339,14 +341,14 @@ static ASTNode* parser_parse_call(Parser* parser, ASTNode* callee) {
             }
             if (parser->current_token.type != TOKEN_COMMA) {
                 for (int i = 0; i < argument_count; i++) {
-                    ast_destroy(arguments[i]);
+                    ast_destroy_node(arguments[i]);
                     if (argument_names && argument_names[i]) {
                         ES_FREE(argument_names[i]);
                     }
                 }
                 ES_FREE(arguments);
                 ES_FREE(argument_names);
-                ast_destroy(callee);
+                ast_destroy_node(callee);
                 return NULL;
             }
             parser_advance(parser);
@@ -354,28 +356,28 @@ static ASTNode* parser_parse_call(Parser* parser, ASTNode* callee) {
     }
     if (parser->current_token.type != TOKEN_RIGHT_PAREN) {
         for (int i = 0; i < argument_count; i++) {
-            ast_destroy(arguments[i]);
+            ast_destroy_node(arguments[i]);
             if (argument_names && argument_names[i]) {
                 ES_FREE(argument_names[i]);
             }
         }
         ES_FREE(arguments);
         ES_FREE(argument_names);
-        ast_destroy(callee);
+        ast_destroy_node(callee);
         return NULL;
     }
     parser_advance(parser);
-    ASTNode* node = ast_create_node(AST_CALL);
+    ASTNode* node = ast_create_node(AST_CALL, parser->current_token.line, parser->current_token.column);
     if (callee->type == AST_IDENTIFIER) {
         node->data.call.name = ES_STRDUP(callee->data.identifier_name);
         node->data.call.object = NULL;
-        ast_destroy(callee);
+        ast_destroy_node(callee);
     } else if (callee->type == AST_MEMBER_ACCESS) {
         node->data.call.name = ES_STRDUP(callee->data.member_access.member_name);
         ASTNode* object = callee->data.member_access.object;
         callee->data.member_access.object = NULL;
         node->data.call.object = object;
-        ast_destroy(callee);
+        ast_destroy_node(callee);
     } else {
         node->data.call.name = ES_STRDUP("__expr_call__");
         node->data.call.object = callee;
@@ -422,7 +424,7 @@ static ASTNode* parser_parse_console_writeline(Parser* parser) {
         }
         values = (ASTNode**)ES_MALLOC(sizeof(ASTNode*));
         if (!values) {
-            ast_destroy(first_value);
+            ast_destroy_node(first_value);
             return NULL;
         }
         values[0] = first_value;
@@ -432,16 +434,16 @@ static ASTNode* parser_parse_console_writeline(Parser* parser) {
             ASTNode* next_value = parser_parse_expression(parser);
             if (!next_value) {
                 for (int i = 0; i < value_count; i++) {
-                    ast_destroy(values[i]);
+                    ast_destroy_node(values[i]);
                 }
                 ES_FREE(values);
                 return NULL;
             }
             ASTNode** new_values = (ASTNode**)ES_REALLOC(values, (value_count + 1) * sizeof(ASTNode*));
             if (!new_values) {
-                ast_destroy(next_value);
+                ast_destroy_node(next_value);
                 for (int i = 0; i < value_count; i++) {
-                    ast_destroy(values[i]);
+                    ast_destroy_node(values[i]);
                 }
                 ES_FREE(values);
                 return NULL;
@@ -453,16 +455,16 @@ static ASTNode* parser_parse_console_writeline(Parser* parser) {
     }
     if (parser->current_token.type != TOKEN_RIGHT_PAREN) {
         for (int i = 0; i < value_count; i++) {
-            ast_destroy(values[i]);
+            ast_destroy_node(values[i]);
         }
         ES_FREE(values);
         return NULL;
     }
     parser_advance(parser);
-    ASTNode* node = ast_create_node(AST_PRINT_STATEMENT);
+    ASTNode* node = ast_create_node(AST_PRINT_STATEMENT, parser->current_token.line, parser->current_token.column);
     if (!node) {
         for (int i = 0; i < value_count; i++) {
-            ast_destroy(values[i]);
+            ast_destroy_node(values[i]);
         }
         ES_FREE(values);
         return NULL;
@@ -472,6 +474,8 @@ static ASTNode* parser_parse_console_writeline(Parser* parser) {
     return node;
 }
 static ASTNode* parser_parse_namespace_declaration(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     if (parser->current_token.type != TOKEN_IDENTIFIER) {
         return NULL;
@@ -487,12 +491,14 @@ static ASTNode* parser_parse_namespace_declaration(Parser* parser) {
         ES_FREE(name);
         return NULL;
     }
-    ASTNode* node = ast_create_node(AST_NAMESPACE_DECLARATION);
+    ASTNode* node = ast_create_node(AST_NAMESPACE_DECLARATION, line, col);
     node->data.namespace_decl.name = name;
     node->data.namespace_decl.body = body;
     return node;
 }
 static ASTNode* parser_parse_class_declaration(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     if (parser->current_token.type != TOKEN_IDENTIFIER) {
         return NULL;
@@ -501,12 +507,14 @@ static ASTNode* parser_parse_class_declaration(Parser* parser) {
     parser_advance(parser);
     ASTNode* base_class = NULL;
     if (parser->current_token.type == TOKEN_COLON) {
+        int bc_line = parser->current_token.line;
+        int bc_col = parser->current_token.column;
         parser_advance(parser);
         if (parser->current_token.type != TOKEN_IDENTIFIER) {
             ES_FREE(name);
             return NULL;
         }
-        base_class = ast_create_node(AST_IDENTIFIER);
+        base_class = ast_create_node(AST_IDENTIFIER, bc_line, bc_col);
         base_class->data.identifier_name = ES_STRDUP(parser->current_token.value);
         parser_advance(parser);
     }
@@ -514,11 +522,11 @@ static ASTNode* parser_parse_class_declaration(Parser* parser) {
     if (!body) {
         ES_FREE(name);
         if (base_class) {
-            ast_destroy(base_class);
+            ast_destroy_node(base_class);
         }
         return NULL;
     }
-    ASTNode* node = ast_create_node(AST_CLASS_DECLARATION);
+    ASTNode* node = ast_create_node(AST_CLASS_DECLARATION, line, col);
     node->data.class_decl.name = name;
     node->data.class_decl.body = body;
     node->data.class_decl.base_class = base_class;
@@ -527,29 +535,31 @@ static ASTNode* parser_parse_class_declaration(Parser* parser) {
 
 static ASTNode* parser_parse_primary(Parser* parser) {
     ASTNode* node = NULL;
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     switch (parser->current_token.type) {
         case TOKEN_NUMBER:
-            node = ast_create_node(AST_NUMBER);
+            node = ast_create_node(AST_NUMBER, line, col);
             node->data.number_value = atof(parser->current_token.value);
             parser_advance(parser);
             break;
         case TOKEN_STRING:
-            node = ast_create_node(AST_STRING);
+            node = ast_create_node(AST_STRING, line, col);
             node->data.string_value = ES_STRDUP(parser->current_token.value);
             parser_advance(parser);
             break;
         case TOKEN_TRUE:
-            node = ast_create_node(AST_BOOLEAN);
+            node = ast_create_node(AST_BOOLEAN, line, col);
             node->data.boolean_value = 1;
             parser_advance(parser);
             break;
         case TOKEN_FALSE:
-            node = ast_create_node(AST_BOOLEAN);
+            node = ast_create_node(AST_BOOLEAN, line, col);
             node->data.boolean_value = 0;
             parser_advance(parser);
             break;
         case TOKEN_IDENTIFIER:
-            node = ast_create_node(AST_IDENTIFIER);
+            node = ast_create_node(AST_IDENTIFIER, line, col);
             node->data.identifier_name = ES_STRDUP(parser->current_token.value);
             parser_advance(parser);
             break;
@@ -623,7 +633,7 @@ static ASTNode* parser_parse_primary(Parser* parser) {
                     
                     ASTNode* expr = parser_parse_expression(parser);
                     if (parser->current_token.type != TOKEN_RIGHT_PAREN) {
-                        ast_destroy(expr);
+                        ast_destroy_node(expr);
                         return NULL;
                     }
                     parser_advance(parser);
@@ -659,7 +669,7 @@ static ASTNode* parser_parse_primary(Parser* parser) {
                 if (!operand) {
                     return NULL;
                 }
-                node = ast_create_node(AST_UNARY_OPERATION);
+                node = ast_create_node(AST_UNARY_OPERATION, line, col);
                 node->data.unary_op.operator = cast_type;
                 node->data.unary_op.operand = operand;
                 node->data.unary_op.is_postfix = false;
@@ -667,7 +677,7 @@ static ASTNode* parser_parse_primary(Parser* parser) {
             }
             node = parser_parse_expression(parser);
             if (parser->current_token.type != TOKEN_RIGHT_PAREN) {
-                ast_destroy(node);
+                ast_destroy_node(node);
                 return NULL;
             }
             parser_advance(parser);
@@ -682,7 +692,7 @@ static ASTNode* parser_parse_primary(Parser* parser) {
                     ASTNode* element = parser_parse_expression(parser);
                     if (!element) {
                         for (int i = 0; i < element_count; i++) {
-                            ast_destroy(elements[i]);
+                            ast_destroy_node(elements[i]);
                         }
                         ES_FREE(elements);
                         return NULL;
@@ -690,7 +700,7 @@ static ASTNode* parser_parse_primary(Parser* parser) {
                     ASTNode** new_elements = (ASTNode**)ES_REALLOC(elements, (element_count + 1) * sizeof(ASTNode*));
                     if (!new_elements) {
                         for (int i = 0; i < element_count; i++) {
-                            ast_destroy(elements[i]);
+                            ast_destroy_node(elements[i]);
                         }
                         ES_FREE(elements);
                         return NULL;
@@ -703,7 +713,7 @@ static ASTNode* parser_parse_primary(Parser* parser) {
                     }
                     if (parser->current_token.type != TOKEN_COMMA) {
                         for (int i = 0; i < element_count; i++) {
-                            ast_destroy(elements[i]);
+                            ast_destroy_node(elements[i]);
                         }
                         ES_FREE(elements);
                         return NULL;
@@ -713,20 +723,20 @@ static ASTNode* parser_parse_primary(Parser* parser) {
             }
             if (parser->current_token.type != TOKEN_RIGHT_BRACKET) {
                 for (int i = 0; i < element_count; i++) {
-                    ast_destroy(elements[i]);
+                    ast_destroy_node(elements[i]);
                 }
                 ES_FREE(elements);
                 return NULL;
             }
             parser_advance(parser);
-            node = ast_create_node(AST_ARRAY_LITERAL);
+            node = ast_create_node(AST_ARRAY_LITERAL, line, col);
             node->data.array_literal.elements = elements;
             node->data.array_literal.element_count = element_count;
             break;
         case TOKEN_NEW: return parser_parse_new_expression(parser);
         case TOKEN_THIS:
             parser_advance(parser);
-            return ast_create_node(AST_THIS);
+            return ast_create_node(AST_THIS, line, col);
         case TOKEN_MINUS:
         case TOKEN_PLUS: {
             EsTokenType op = parser->current_token.type;
@@ -735,9 +745,9 @@ static ASTNode* parser_parse_primary(Parser* parser) {
             if (!operand) {
                 return NULL;
             }
-            ASTNode* node = ast_create_node(AST_UNARY_OPERATION);
+            ASTNode* node = ast_create_node(AST_UNARY_OPERATION, line, col);
             if (!node) {
-                ast_destroy(operand);
+                ast_destroy_node(operand);
                 return NULL;
             }
             node->data.unary_op.operator = op;
@@ -794,16 +804,18 @@ static ASTNode* parser_parse_binary_operation(Parser* parser, int precedence) {
         if (op_precedence <= precedence) {
             break;
         }
+        int line = parser->current_token.line;
+        int col = parser->current_token.column;
         parser_advance(parser);
         ASTNode* right = parser_parse_binary_operation(parser, op_precedence);
         if (!right) {
-            ast_destroy(left);
+            ast_destroy_node(left);
             return NULL;
         }
-        ASTNode* new_node = ast_create_node(AST_BINARY_OPERATION);
+        ASTNode* new_node = ast_create_node(AST_BINARY_OPERATION, line, col);
         if (!new_node) {
-            ast_destroy(left);
-            ast_destroy(right);
+            ast_destroy_node(left);
+            ast_destroy_node(right);
             return NULL;
         }
         new_node->data.binary_op.left = left;
@@ -822,45 +834,47 @@ static ASTNode* parser_parse_postfix_expression(Parser* parser) {
     while (parser->current_token.type == TOKEN_DOT ||
            parser->current_token.type == TOKEN_DOUBLE_COLON ||
            parser->current_token.type == TOKEN_LEFT_BRACKET) {
+        int line = parser->current_token.line;
+        int col = parser->current_token.column;
         if (parser->current_token.type == TOKEN_LEFT_BRACKET) {
             parser_advance(parser);
             ASTNode* index = parser_parse_expression(parser);
             if (!index) {
-                ast_destroy(left);
+                ast_destroy_node(left);
                 return NULL;
             }
             if (parser->current_token.type != TOKEN_RIGHT_BRACKET) {
-                ast_destroy(left);
-                ast_destroy(index);
+                ast_destroy_node(left);
+                ast_destroy_node(index);
                 return NULL;
             }
             parser_advance(parser);
-            ASTNode* array_access = ast_create_node(AST_ARRAY_ACCESS);
+            ASTNode* array_access = ast_create_node(AST_ARRAY_ACCESS, line, col);
             if (array_access) {
                 array_access->data.array_access.array = left;
                 array_access->data.array_access.index = index;
                 left = array_access;
             } else {
-                ast_destroy(left);
-                ast_destroy(index);
+                ast_destroy_node(left);
+                ast_destroy_node(index);
                 return NULL;
             }
         } else if (parser->current_token.type == TOKEN_DOT) {
             parser_advance(parser);
             if (parser->current_token.type != TOKEN_IDENTIFIER) {
-                ast_destroy(left);
+                ast_destroy_node(left);
                 return NULL;
             }
             char* member_name = ES_STRDUP(parser->current_token.value);
             if (!member_name) {
-                ast_destroy(left);
+                ast_destroy_node(left);
                 return NULL;
             }
             parser_advance(parser);
-            ASTNode* node = ast_create_node(AST_MEMBER_ACCESS);
+            ASTNode* node = ast_create_node(AST_MEMBER_ACCESS, line, col);
             if (!node) {
                 ES_FREE(member_name);
-                ast_destroy(left);
+                ast_destroy_node(left);
                 return NULL;
             }
             node->data.member_access.object = left;
@@ -876,30 +890,30 @@ static ASTNode* parser_parse_postfix_expression(Parser* parser) {
         } else if (parser->current_token.type == TOKEN_DOUBLE_COLON) {
             parser_advance(parser);
             if (parser->current_token.type != TOKEN_IDENTIFIER) {
-                ast_destroy(left);
+                ast_destroy_node(left);
                 return NULL;
             }
             char* method_name = ES_STRDUP(parser->current_token.value);
             if (!method_name) {
-                ast_destroy(left);
+                ast_destroy_node(left);
                 return NULL;
             }
             parser_advance(parser);
             if (left->type != AST_IDENTIFIER) {
                 ES_FREE(method_name);
-                ast_destroy(left);
+                ast_destroy_node(left);
                 return NULL;
             }
             char* class_name = ES_STRDUP(left->data.identifier_name);
             if (!class_name) {
                 ES_FREE(method_name);
-                ast_destroy(left);
+                ast_destroy_node(left);
                 return NULL;
             }
             if (parser->current_token.type != TOKEN_LEFT_PAREN) {
                 ES_FREE(class_name);
                 ES_FREE(method_name);
-                ast_destroy(left);
+                ast_destroy_node(left);
                 return NULL;
             }
             parser_advance(parser);
@@ -910,24 +924,24 @@ static ASTNode* parser_parse_postfix_expression(Parser* parser) {
                     ASTNode* arg = parser_parse_expression(parser);
                     if (!arg) {
                         for (int i = 0; i < argument_count; i++) {
-                            ast_destroy(arguments[i]);
+                            ast_destroy_node(arguments[i]);
                         }
                         ES_FREE(arguments);
                         ES_FREE(class_name);
                         ES_FREE(method_name);
-                        ast_destroy(left);
+                        ast_destroy_node(left);
                         return NULL;
                     }
                     ASTNode** new_args = (ASTNode**)ES_REALLOC(arguments, (argument_count + 1) * sizeof(ASTNode*));
                     if (!new_args) {
                         for (int i = 0; i < argument_count; i++) {
-                            ast_destroy(arguments[i]);
+                            ast_destroy_node(arguments[i]);
                         }
                         ES_FREE(arguments);
                         ES_FREE(class_name);
                         ES_FREE(method_name);
-                        ast_destroy(left);
-                        ast_destroy(arg);
+                        ast_destroy_node(left);
+                        ast_destroy_node(arg);
                         return NULL;
                     }
                     arguments = new_args;
@@ -937,12 +951,12 @@ static ASTNode* parser_parse_postfix_expression(Parser* parser) {
                     }
                     if (parser->current_token.type != TOKEN_COMMA) {
                         for (int i = 0; i < argument_count; i++) {
-                            ast_destroy(arguments[i]);
+                            ast_destroy_node(arguments[i]);
                         }
                         ES_FREE(arguments);
                         ES_FREE(class_name);
                         ES_FREE(method_name);
-                        ast_destroy(left);
+                        ast_destroy_node(left);
                         return NULL;
                     }
                     parser_advance(parser);
@@ -950,31 +964,31 @@ static ASTNode* parser_parse_postfix_expression(Parser* parser) {
             }
             if (parser->current_token.type != TOKEN_RIGHT_PAREN) {
                 for (int i = 0; i < argument_count; i++) {
-                    ast_destroy(arguments[i]);
+                    ast_destroy_node(arguments[i]);
                 }
                 ES_FREE(arguments);
                 ES_FREE(class_name);
                 ES_FREE(method_name);
-                ast_destroy(left);
+                ast_destroy_node(left);
                 return NULL;
             }
             parser_advance(parser);
-            ASTNode* static_call_node = ast_create_node(AST_STATIC_METHOD_CALL);
+            ASTNode* static_call_node = ast_create_node(AST_STATIC_METHOD_CALL, line, col);
             if (!static_call_node) {
                 for (int i = 0; i < argument_count; i++) {
-                    ast_destroy(arguments[i]);
+                    ast_destroy_node(arguments[i]);
                 }
                 ES_FREE(arguments);
                 ES_FREE(class_name);
                 ES_FREE(method_name);
-                ast_destroy(left);
+                ast_destroy_node(left);
                 return NULL;
             }
             static_call_node->data.static_call.class_name = class_name;
             static_call_node->data.static_call.method_name = method_name;
             static_call_node->data.static_call.arguments = arguments;
             static_call_node->data.static_call.argument_count = argument_count;
-            ast_destroy(left);
+            ast_destroy_node(left);
             left = static_call_node;
         }
     }
@@ -986,8 +1000,10 @@ static ASTNode* parser_parse_postfix_expression(Parser* parser) {
         left = call_node;
     }
     if (parser->current_token.type == TOKEN_INCREMENT) {
+        int inc_line = parser->current_token.line;
+        int inc_col = parser->current_token.column;
         parser_advance(parser);
-        ASTNode* node = ast_create_node(AST_UNARY_OPERATION);
+        ASTNode* node = ast_create_node(AST_UNARY_OPERATION, inc_line, inc_col);
         node->data.unary_op.operator = TOKEN_INCREMENT;
         node->data.unary_op.operand = left;
         node->data.unary_op.is_postfix = true;
@@ -1002,29 +1018,31 @@ static ASTNode* parser_parse_ternary_operation(Parser* parser) {
         return NULL;
     }
     if (parser->current_token.type == TOKEN_QUESTION) {
+        int line = parser->current_token.line;
+        int col = parser->current_token.column;
         parser_advance(parser);
         ASTNode* true_value = parser_parse_binary_operation(parser, 0);
         if (!true_value) {
-            ast_destroy(condition);
+            ast_destroy_node(condition);
             return NULL;
         }
         if (parser->current_token.type != TOKEN_COLON) {
-            ast_destroy(condition);
-            ast_destroy(true_value);
+            ast_destroy_node(condition);
+            ast_destroy_node(true_value);
             return NULL;
         }
         parser_advance(parser);
         ASTNode* false_value = parser_parse_binary_operation(parser, 0);
         if (!false_value) {
-            ast_destroy(condition);
-            ast_destroy(true_value);
+            ast_destroy_node(condition);
+            ast_destroy_node(true_value);
             return NULL;
         }
-        ASTNode* node = ast_create_node(AST_TERNARY_OPERATION);
+        ASTNode* node = ast_create_node(AST_TERNARY_OPERATION, line, col);
         if (!node) {
-            ast_destroy(condition);
-            ast_destroy(true_value);
-            ast_destroy(false_value);
+            ast_destroy_node(condition);
+            ast_destroy_node(true_value);
+            ast_destroy_node(false_value);
             return NULL;
         }
         node->data.ternary_op.condition = condition;
@@ -1040,6 +1058,8 @@ static ASTNode* parser_parse_expression(Parser* parser) {
 }
 
 static ASTNode* parser_parse_variable_declaration(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     if (parser->current_token.type != TOKEN_IDENTIFIER) {
         return NULL;
@@ -1064,7 +1084,7 @@ static ASTNode* parser_parse_variable_declaration(Parser* parser) {
         if (parser->current_token.type != TOKEN_RIGHT_BRACKET) {
             ES_FREE(name);
             if (array_size) {
-                ast_destroy(array_size);
+                ast_destroy_node(array_size);
             }
             return NULL;
         }
@@ -1077,19 +1097,19 @@ static ASTNode* parser_parse_variable_declaration(Parser* parser) {
         if (!value) {
             ES_FREE(name);
             if (array_size) {
-                ast_destroy(array_size);
+                ast_destroy_node(array_size);
             }
             return NULL;
         }
     }
-    ASTNode* node = ast_create_node(AST_VARIABLE_DECLARATION);
+    ASTNode* node = ast_create_node(AST_VARIABLE_DECLARATION, line, col);
     if (!node) {
         ES_FREE(name);
         if (value) {
-            ast_destroy(value);
+            ast_destroy_node(value);
         }
         if (array_size) {
-            ast_destroy(array_size);
+            ast_destroy_node(array_size);
         }
         return NULL;
     }
@@ -1104,8 +1124,12 @@ static ASTNode* parser_parse_static_member_declaration(Parser* parser) {
     if (!parser || parser->current_token.type != TOKEN_STATIC) {
         return NULL;
     }
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     if (parser->current_token.type == TOKEN_FUNCTION) {
+        int func_line = parser->current_token.line;
+        int func_col = parser->current_token.column;
         parser_advance(parser);
         if (parser->current_token.type != TOKEN_IDENTIFIER) {
             return NULL;
@@ -1155,10 +1179,11 @@ static ASTNode* parser_parse_static_member_declaration(Parser* parser) {
                                                 parameter_types,
                                                 parameter_count,
                                                 body,
-                                                return_type_token);
+                                                return_type_token,
+                                                func_line, func_col);
         if (!node) {
             parser_free_parameter_list(parameters, parameter_types, parameter_count);
-            ast_destroy(body);
+            ast_destroy_node(body);
             ES_FREE(name);
             return NULL;
         }
@@ -1168,6 +1193,8 @@ static ASTNode* parser_parse_static_member_declaration(Parser* parser) {
         return node;
     }
     if (parser_is_type_keyword(parser->current_token.type)) {
+        int var_line = parser->current_token.line;
+        int var_col = parser->current_token.column;
         EsTokenType type_token = parser->current_token.type;
         parser_advance(parser);
         if (parser->current_token.type != TOKEN_IDENTIFIER) {
@@ -1182,7 +1209,7 @@ static ASTNode* parser_parse_static_member_declaration(Parser* parser) {
         token_free(&next_token);
         if (next_type == TOKEN_LEFT_PAREN) {
             parser_advance(parser);
-            return parser_parse_typed_function_declaration(parser, type_token, identifier_name, 1);
+            return parser_parse_typed_function_declaration(parser, type_token, identifier_name, 1, var_line, var_col);
         }
         parser_advance(parser);
         ASTNode* value = NULL;
@@ -1197,7 +1224,7 @@ static ASTNode* parser_parse_static_member_declaration(Parser* parser) {
         if (parser->current_token.type == TOKEN_SEMICOLON) {
             parser_advance(parser);
         }
-        ASTNode* node = ast_create_node(AST_STATIC_VARIABLE_DECLARATION);
+        ASTNode* node = ast_create_node(AST_STATIC_VARIABLE_DECLARATION, var_line, var_col);
         node->data.static_variable_decl.name = identifier_name;
         node->data.static_variable_decl.value = value;
         node->data.static_variable_decl.type = type_token;
@@ -1206,6 +1233,8 @@ static ASTNode* parser_parse_static_member_declaration(Parser* parser) {
 
 
     if (parser->current_token.type == TOKEN_VAR) {
+        int var_line = parser->current_token.line;
+        int var_col = parser->current_token.column;
         parser_advance(parser);
         if (parser->current_token.type != TOKEN_IDENTIFIER) {
             return NULL;
@@ -1227,11 +1256,11 @@ static ASTNode* parser_parse_static_member_declaration(Parser* parser) {
         if (parser->current_token.type == TOKEN_SEMICOLON) {
             parser_advance(parser);
         }
-        ASTNode* node = ast_create_node(AST_STATIC_VARIABLE_DECLARATION);
+        ASTNode* node = ast_create_node(AST_STATIC_VARIABLE_DECLARATION, var_line, var_col);
         if (!node) {
             ES_FREE(name);
             if (value) {
-                ast_destroy(value);
+                ast_destroy_node(value);
             }
             return NULL;
         }
@@ -1241,6 +1270,8 @@ static ASTNode* parser_parse_static_member_declaration(Parser* parser) {
         return node;
     }
     if (parser->current_token.type == TOKEN_IDENTIFIER) {
+        int var_line = parser->current_token.line;
+        int var_col = parser->current_token.column;
         char* name = ES_STRDUP(parser->current_token.value);
         if (!name) {
             return NULL;
@@ -1258,11 +1289,11 @@ static ASTNode* parser_parse_static_member_declaration(Parser* parser) {
         if (parser->current_token.type == TOKEN_SEMICOLON) {
             parser_advance(parser);
         }
-        ASTNode* node = ast_create_node(AST_STATIC_VARIABLE_DECLARATION);
+        ASTNode* node = ast_create_node(AST_STATIC_VARIABLE_DECLARATION, var_line, var_col);
         if (!node) {
             ES_FREE(name);
             if (value) {
-                ast_destroy(value);
+                ast_destroy_node(value);
             }
             return NULL;
         }
@@ -1280,7 +1311,7 @@ static ASTNode* parser_parse_static_variable_declaration(Parser* parser) {
         return NULL;
     }
     if (node->type != AST_STATIC_VARIABLE_DECLARATION) {
-        ast_destroy(node);
+        ast_destroy_node(node);
         return NULL;
     }
     return node;
@@ -1292,7 +1323,7 @@ static ASTNode* parser_parse_static_function_declaration(Parser* parser) {
         return NULL;
     }
     if (node->type != AST_STATIC_FUNCTION_DECLARATION) {
-        ast_destroy(node);
+        ast_destroy_node(node);
         return NULL;
     }
     return node;
@@ -1311,19 +1342,21 @@ static ASTNode* parser_parse_assignment_from_left(Parser* parser, ASTNode* left)
         return left;
     }
     
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     ASTNode* value = parser_parse_expression(parser);
     if (!value) {
-        ast_destroy(left);
+        ast_destroy_node(left);
         return NULL;
     }
     
     if (left->type == AST_ARRAY_ACCESS) {
         if (operator == TOKEN_ASSIGN) {
-            ASTNode* node = ast_create_node(AST_ARRAY_ASSIGNMENT);
+            ASTNode* node = ast_create_node(AST_ARRAY_ASSIGNMENT, line, col);
             if (!node) {
-                ast_destroy(left);
-                ast_destroy(value);
+                ast_destroy_node(left);
+                ast_destroy_node(value);
                 return NULL;
             }
             node->data.array_assignment.array = left->data.array_access.array;
@@ -1332,10 +1365,10 @@ static ASTNode* parser_parse_assignment_from_left(Parser* parser, ASTNode* left)
             ES_FREE(left);
             return node;
         } else {
-            ASTNode* node = ast_create_node(AST_ARRAY_COMPOUND_ASSIGNMENT);
+            ASTNode* node = ast_create_node(AST_ARRAY_COMPOUND_ASSIGNMENT, line, col);
             if (!node) {
-                ast_destroy(left);
-                ast_destroy(value);
+                ast_destroy_node(left);
+                ast_destroy_node(value);
                 return NULL;
             }
             node->data.array_compound_assignment.array = left->data.array_access.array;
@@ -1347,33 +1380,33 @@ static ASTNode* parser_parse_assignment_from_left(Parser* parser, ASTNode* left)
         }
     } else if (left->type == AST_IDENTIFIER) {
         if (operator == TOKEN_ASSIGN) {
-            ASTNode* node = ast_create_node(AST_ASSIGNMENT);
+            ASTNode* node = ast_create_node(AST_ASSIGNMENT, line, col);
             if (!node) {
-                ast_destroy(left);
-                ast_destroy(value);
+                ast_destroy_node(left);
+                ast_destroy_node(value);
                 return NULL;
             }
             node->data.assignment.name = ES_STRDUP(left->data.identifier_name);
             node->data.assignment.value = value;
-            ast_destroy(left);
+            ast_destroy_node(left);
             return node;
         } else {
-            ASTNode* node = ast_create_node(AST_COMPOUND_ASSIGNMENT);
+            ASTNode* node = ast_create_node(AST_COMPOUND_ASSIGNMENT, line, col);
             if (!node) {
-                ast_destroy(left);
-                ast_destroy(value);
+                ast_destroy_node(left);
+                ast_destroy_node(value);
                 return NULL;
             }
             node->data.compound_assignment.name = ES_STRDUP(left->data.identifier_name);
             node->data.compound_assignment.value = value;
             node->data.compound_assignment.operator = operator;
-            ast_destroy(left);
+            ast_destroy_node(left);
             return node;
         }
     }
     
-    ast_destroy(left);
-    ast_destroy(value);
+    ast_destroy_node(left);
+    ast_destroy_node(value);
     return NULL;
 }
 
@@ -1389,21 +1422,23 @@ static ASTNode* parser_parse_assignment(Parser* parser) {
         operator != TOKEN_MUL_ASSIGN && 
         operator != TOKEN_DIV_ASSIGN && 
         operator != TOKEN_MOD_ASSIGN) {
-        ast_destroy(left);
+        ast_destroy_node(left);
         return NULL;
     }
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     ASTNode* value = parser_parse_expression(parser);
     if (!value) {
-        ast_destroy(left);
+        ast_destroy_node(left);
         return NULL;
     }
     if (left->type == AST_ARRAY_ACCESS) {
         if (operator == TOKEN_ASSIGN) {
-            ASTNode* node = ast_create_node(AST_ARRAY_ASSIGNMENT);
+            ASTNode* node = ast_create_node(AST_ARRAY_ASSIGNMENT, line, col);
             if (!node) {
-                ast_destroy(left);
-                ast_destroy(value);
+                ast_destroy_node(left);
+                ast_destroy_node(value);
                 return NULL;
             }
             node->data.array_assignment.array = left->data.array_access.array;
@@ -1412,10 +1447,10 @@ static ASTNode* parser_parse_assignment(Parser* parser) {
             ES_FREE(left);
             return node;
         } else {
-            ASTNode* node = ast_create_node(AST_ARRAY_COMPOUND_ASSIGNMENT);
+            ASTNode* node = ast_create_node(AST_ARRAY_COMPOUND_ASSIGNMENT, line, col);
             if (!node) {
-                ast_destroy(left);
-                ast_destroy(value);
+                ast_destroy_node(left);
+                ast_destroy_node(value);
                 return NULL;
             }
             node->data.array_compound_assignment.array = left->data.array_access.array;
@@ -1427,37 +1462,39 @@ static ASTNode* parser_parse_assignment(Parser* parser) {
         }
     } else if (left->type == AST_IDENTIFIER) {
         if (operator == TOKEN_ASSIGN) {
-            ASTNode* node = ast_create_node(AST_ASSIGNMENT);
+            ASTNode* node = ast_create_node(AST_ASSIGNMENT, line, col);
             if (!node) {
-                ast_destroy(left);
-                ast_destroy(value);
+                ast_destroy_node(left);
+                ast_destroy_node(value);
                 return NULL;
             }
             node->data.assignment.name = ES_STRDUP(left->data.identifier_name);
             node->data.assignment.value = value;
-            ast_destroy(left);
+            ast_destroy_node(left);
             return node;
         } else {
-            ASTNode* node = ast_create_node(AST_COMPOUND_ASSIGNMENT);
+            ASTNode* node = ast_create_node(AST_COMPOUND_ASSIGNMENT, line, col);
             if (!node) {
-                ast_destroy(left);
-                ast_destroy(value);
+                ast_destroy_node(left);
+                ast_destroy_node(value);
                 return NULL;
             }
             node->data.compound_assignment.name = ES_STRDUP(left->data.identifier_name);
             node->data.compound_assignment.value = value;
             node->data.compound_assignment.operator = operator;
-            ast_destroy(left);
+            ast_destroy_node(left);
             return node;
         }
     } else {
-        ast_destroy(left);
-        ast_destroy(value);
+        ast_destroy_node(left);
+        ast_destroy_node(value);
         return NULL;
     }
 }
 
 static ASTNode* parser_parse_print_statement(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     if (parser->current_token.type != TOKEN_LEFT_PAREN) {
         return NULL;
@@ -1471,7 +1508,7 @@ static ASTNode* parser_parse_print_statement(Parser* parser) {
     }
     values = (ASTNode**)ES_MALLOC(sizeof(ASTNode*));
     if (!values) {
-        ast_destroy(first_value);
+        ast_destroy_node(first_value);
         return NULL;
     }
     values[0] = first_value;
@@ -1481,7 +1518,7 @@ static ASTNode* parser_parse_print_statement(Parser* parser) {
         ASTNode* next_value = parser_parse_expression(parser);
         if (!next_value) {
             for (int i = 0; i < value_count; i++) {
-                ast_destroy(values[i]);
+                ast_destroy_node(values[i]);
             }
             ES_FREE(values);
             return NULL;
@@ -1489,9 +1526,9 @@ static ASTNode* parser_parse_print_statement(Parser* parser) {
         ASTNode** new_values = (ASTNode**)ES_REALLOC(values, (value_count + 1) * sizeof(ASTNode*));
         if (!new_values) {
             for (int i = 0; i < value_count; i++) {
-                ast_destroy(values[i]);
+                ast_destroy_node(values[i]);
             }
-            ast_destroy(next_value);
+            ast_destroy_node(next_value);
             ES_FREE(values);
             return NULL;
         }
@@ -1500,16 +1537,16 @@ static ASTNode* parser_parse_print_statement(Parser* parser) {
     }
     if (parser->current_token.type != TOKEN_RIGHT_PAREN) {
         for (int i = 0; i < value_count; i++) {
-            ast_destroy(values[i]);
+            ast_destroy_node(values[i]);
         }
         ES_FREE(values);
         return NULL;
     }
     parser_advance(parser);
-    ASTNode* node = ast_create_node(AST_PRINT_STATEMENT);
+    ASTNode* node = ast_create_node(AST_PRINT_STATEMENT, line, col);
     if (!node) {
         for (int i = 0; i < value_count; i++) {
-            ast_destroy(values[i]);
+            ast_destroy_node(values[i]);
         }
         ES_FREE(values);
         return NULL;
@@ -1520,6 +1557,8 @@ static ASTNode* parser_parse_print_statement(Parser* parser) {
 }
 
 static ASTNode* parser_parse_return_statement(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     ASTNode* value = NULL;
     if (parser->current_token.type != TOKEN_SEMICOLON) {
@@ -1528,10 +1567,10 @@ static ASTNode* parser_parse_return_statement(Parser* parser) {
             return NULL;
         }
     }
-    ASTNode* node = ast_create_node(AST_RETURN_STATEMENT);
+    ASTNode* node = ast_create_node(AST_RETURN_STATEMENT, line, col);
     if (!node) {
         if (value) {
-            ast_destroy(value);
+            ast_destroy_node(value);
         }
         return NULL;
     }
@@ -1540,6 +1579,8 @@ static ASTNode* parser_parse_return_statement(Parser* parser) {
 }
 
 static ASTNode* parser_parse_access_modifier(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     EsTokenType access_type = parser->current_token.type;
     parser_advance(parser);
     if (parser->current_token.type == TOKEN_STATIC) {
@@ -1547,9 +1588,9 @@ static ASTNode* parser_parse_access_modifier(Parser* parser) {
         if (!member) {
             return NULL;
         }
-        ASTNode* node = ast_create_node(AST_ACCESS_MODIFIER);
+        ASTNode* node = ast_create_node(AST_ACCESS_MODIFIER, line, col);
         if (!node) {
-            ast_destroy(member);
+            ast_destroy_node(member);
             return NULL;
         }
         node->data.access_modifier.access_modifier = access_type;
@@ -1561,9 +1602,9 @@ static ASTNode* parser_parse_access_modifier(Parser* parser) {
         if (!member) {
             return NULL;
         }
-        ASTNode* node = ast_create_node(AST_ACCESS_MODIFIER);
+        ASTNode* node = ast_create_node(AST_ACCESS_MODIFIER, line, col);
         if (!node) {
-            ast_destroy(member);
+            ast_destroy_node(member);
             return NULL;
         }
         node->data.access_modifier.access_modifier = access_type;
@@ -1574,9 +1615,9 @@ static ASTNode* parser_parse_access_modifier(Parser* parser) {
         if (!member) {
             return NULL;
         }
-        ASTNode* node = ast_create_node(AST_ACCESS_MODIFIER);
+        ASTNode* node = ast_create_node(AST_ACCESS_MODIFIER, line, col);
         if (!node) {
-            ast_destroy(member);
+            ast_destroy_node(member);
             return NULL;
         }
         node->data.access_modifier.access_modifier = access_type;
@@ -1587,9 +1628,9 @@ static ASTNode* parser_parse_access_modifier(Parser* parser) {
         if (!member) {
             return NULL;
         }
-        ASTNode* node = ast_create_node(AST_ACCESS_MODIFIER);
+        ASTNode* node = ast_create_node(AST_ACCESS_MODIFIER, line, col);
         if (!node) {
-            ast_destroy(member);
+            ast_destroy_node(member);
             return NULL;
         }
         node->data.access_modifier.access_modifier = access_type;
@@ -1600,9 +1641,9 @@ static ASTNode* parser_parse_access_modifier(Parser* parser) {
         if (!member) {
             return NULL;
         }
-        ASTNode* node = ast_create_node(AST_ACCESS_MODIFIER);
+        ASTNode* node = ast_create_node(AST_ACCESS_MODIFIER, line, col);
         if (!node) {
-            ast_destroy(member);
+            ast_destroy_node(member);
             return NULL;
         }
         node->data.access_modifier.access_modifier = access_type;
@@ -1613,9 +1654,9 @@ static ASTNode* parser_parse_access_modifier(Parser* parser) {
         if (!member) {
             return NULL;
         }
-        ASTNode* node = ast_create_node(AST_ACCESS_MODIFIER);
+        ASTNode* node = ast_create_node(AST_ACCESS_MODIFIER, line, col);
         if (!node) {
-            ast_destroy(member);
+            ast_destroy_node(member);
             return NULL;
         }
         node->data.access_modifier.access_modifier = access_type;
@@ -1626,6 +1667,8 @@ static ASTNode* parser_parse_access_modifier(Parser* parser) {
 }
 
 static ASTNode* parser_parse_constructor_declaration(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     char** parameters = NULL;
     EsTokenType* parameter_types = NULL;
@@ -1698,14 +1741,14 @@ static ASTNode* parser_parse_constructor_declaration(Parser* parser) {
         ES_FREE(parameter_types);
         return NULL;
     }
-    ASTNode* node = ast_create_node(AST_CONSTRUCTOR_DECLARATION);
+    ASTNode* node = ast_create_node(AST_CONSTRUCTOR_DECLARATION, line, col);
     if (!node) {
         for (int i = 0; i < parameter_count; i++) {
             ES_FREE(parameters[i]);
         }
         ES_FREE(parameters);
         ES_FREE(parameter_types);
-        ast_destroy(body);
+        ast_destroy_node(body);
         return NULL;
     }
     node->data.constructor_decl.parameters = parameters;
@@ -1719,6 +1762,8 @@ static ASTNode* parser_parse_constructor_declaration(Parser* parser) {
 }
 
 static ASTNode* parser_parse_destructor_declaration(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     char* class_name = NULL;
     if (parser->current_token.type == TOKEN_LEFT_PAREN) {
@@ -1738,12 +1783,12 @@ static ASTNode* parser_parse_destructor_declaration(Parser* parser) {
         }
         return NULL;
     }
-    ASTNode* node = ast_create_node(AST_DESTRUCTOR_DECLARATION);
+    ASTNode* node = ast_create_node(AST_DESTRUCTOR_DECLARATION, line, col);
     if (!node) {
         if (class_name) {
             ES_FREE(class_name);
         }
-        ast_destroy(body);
+        ast_destroy_node(body);
         return NULL;
     }
     node->data.destructor_decl.class_name = class_name;
@@ -1755,6 +1800,8 @@ static ASTNode* parser_parse_destructor_declaration(Parser* parser) {
 }
 
 static ASTNode* parser_parse_function_declaration(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     EsTokenType return_type = TOKEN_VOID;
     char* name = NULL;
@@ -1811,10 +1858,11 @@ static ASTNode* parser_parse_function_declaration(Parser* parser) {
                                                 parameter_types,
                                                 parameter_count,
                                                 body,
-                                                return_type);
+                                                return_type,
+                                                line, col);
     if (!node) {
         parser_free_parameter_list(parameters, parameter_types, parameter_count);
-        ast_destroy(body);
+        ast_destroy_node(body);
         ES_FREE(name);
         return NULL;
     }
@@ -1827,7 +1875,8 @@ static ASTNode* parser_parse_function_declaration(Parser* parser) {
 static ASTNode* parser_parse_typed_function_declaration(Parser* parser,
                                                        EsTokenType return_type,
                                                        char* function_name,
-                                                       int is_static) {
+                                                       int is_static,
+                                                       int line, int col) {
     if (parser->current_token.type != TOKEN_LEFT_PAREN) {
         ES_FREE(function_name);
         return NULL;
@@ -1859,10 +1908,11 @@ static ASTNode* parser_parse_typed_function_declaration(Parser* parser,
                                                 parameter_types,
                                                 parameter_count,
                                                 body,
-                                                return_type);
+                                                return_type,
+                                                line, col);
     if (!node) {
         parser_free_parameter_list(parameters, parameter_types, parameter_count);
-        ast_destroy(body);
+        ast_destroy_node(body);
         ES_FREE(function_name);
         return NULL;
     }
@@ -1874,6 +1924,8 @@ static ASTNode* parser_parse_typed_function_declaration(Parser* parser,
 
 
 static ASTNode* parser_parse_if_statement(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     if (parser->current_token.type != TOKEN_LEFT_PAREN) {
         return NULL;
@@ -1884,13 +1936,13 @@ static ASTNode* parser_parse_if_statement(Parser* parser) {
         return NULL;
     }
     if (parser->current_token.type != TOKEN_RIGHT_PAREN) {
-        ast_destroy(condition);
+        ast_destroy_node(condition);
         return NULL;
     }
     parser_advance(parser);
     ASTNode* then_branch = parser_parse_statement(parser);
     if (!then_branch) {
-        ast_destroy(condition);
+        ast_destroy_node(condition);
         return NULL;
     }
     ASTNode* else_branch = NULL;
@@ -1898,17 +1950,17 @@ static ASTNode* parser_parse_if_statement(Parser* parser) {
         parser_advance(parser);
         else_branch = parser_parse_statement(parser);
         if (!else_branch) {
-            ast_destroy(condition);
-            ast_destroy(then_branch);
+            ast_destroy_node(condition);
+            ast_destroy_node(then_branch);
             return NULL;
         }
     }
-    ASTNode* node = ast_create_node(AST_IF_STATEMENT);
+    ASTNode* node = ast_create_node(AST_IF_STATEMENT, line, col);
     if (!node) {
-        ast_destroy(condition);
-        ast_destroy(then_branch);
+        ast_destroy_node(condition);
+        ast_destroy_node(then_branch);
         if (else_branch) {
-            ast_destroy(else_branch);
+            ast_destroy_node(else_branch);
         }
         return NULL;
     }
@@ -1919,6 +1971,8 @@ static ASTNode* parser_parse_if_statement(Parser* parser) {
 }
 
 static ASTNode* parser_parse_while_statement(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     if (parser->current_token.type != TOKEN_LEFT_PAREN) {
         return NULL;
@@ -1929,19 +1983,19 @@ static ASTNode* parser_parse_while_statement(Parser* parser) {
         return NULL;
     }
     if (parser->current_token.type != TOKEN_RIGHT_PAREN) {
-        ast_destroy(condition);
+        ast_destroy_node(condition);
         return NULL;
     }
     parser_advance(parser);
     ASTNode* body = parser_parse_statement(parser);
     if (!body) {
-        ast_destroy(condition);
+        ast_destroy_node(condition);
         return NULL;
     }
-    ASTNode* node = ast_create_node(AST_WHILE_STATEMENT);
+    ASTNode* node = ast_create_node(AST_WHILE_STATEMENT, line, col);
     if (!node) {
-        ast_destroy(condition);
-        ast_destroy(body);
+        ast_destroy_node(condition);
+        ast_destroy_node(body);
         return NULL;
     }
     node->data.while_stmt.condition = condition;
@@ -1950,6 +2004,8 @@ static ASTNode* parser_parse_while_statement(Parser* parser) {
 }
 
 static ASTNode* parser_parse_for_statement(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     if (parser->current_token.type != TOKEN_LEFT_PAREN) {
         return NULL;
@@ -1981,7 +2037,7 @@ static ASTNode* parser_parse_for_statement(Parser* parser) {
     }
     if (parser->current_token.type != TOKEN_SEMICOLON) {
         if (init) {
-            ast_destroy(init);
+            ast_destroy_node(init);
         }
         return NULL;
     }
@@ -1991,17 +2047,17 @@ static ASTNode* parser_parse_for_statement(Parser* parser) {
         condition = parser_parse_expression(parser);
         if (!condition) {
             if (init) {
-                ast_destroy(init);
+                ast_destroy_node(init);
             }
             return NULL;
         }
     }
     if (parser->current_token.type != TOKEN_SEMICOLON) {
         if (init) {
-            ast_destroy(init);
+            ast_destroy_node(init);
         }
         if (condition) {
-            ast_destroy(condition);
+            ast_destroy_node(condition);
         }
         return NULL;
     }
@@ -2024,23 +2080,23 @@ static ASTNode* parser_parse_for_statement(Parser* parser) {
         
         if (!increment) {
             if (init) {
-                ast_destroy(init);
+                ast_destroy_node(init);
             }
             if (condition) {
-                ast_destroy(condition);
+                ast_destroy_node(condition);
             }
             return NULL;
         }
     }
     if (parser->current_token.type != TOKEN_RIGHT_PAREN) {
         if (init) {
-            ast_destroy(init);
+            ast_destroy_node(init);
         }
         if (condition) {
-            ast_destroy(condition);
+            ast_destroy_node(condition);
         }
         if (increment) {
-            ast_destroy(increment);
+            ast_destroy_node(increment);
         }
         return NULL;
     }
@@ -2048,28 +2104,28 @@ static ASTNode* parser_parse_for_statement(Parser* parser) {
     ASTNode* body = parser_parse_statement(parser);
     if (!body) {
         if (init) {
-            ast_destroy(init);
+            ast_destroy_node(init);
         }
         if (condition) {
-            ast_destroy(condition);
+            ast_destroy_node(condition);
         }
         if (increment) {
-            ast_destroy(increment);
+            ast_destroy_node(increment);
         }
         return NULL;
     }
-    ASTNode* node = ast_create_node(AST_FOR_STATEMENT);
+    ASTNode* node = ast_create_node(AST_FOR_STATEMENT, line, col);
     if (!node) {
         if (init) {
-            ast_destroy(init);
+            ast_destroy_node(init);
         }
         if (condition) {
-            ast_destroy(condition);
+            ast_destroy_node(condition);
         }
         if (increment) {
-            ast_destroy(increment);
+            ast_destroy_node(increment);
         }
-        ast_destroy(body);
+        ast_destroy_node(body);
         return NULL;
     }
     node->data.for_stmt.init = init;
@@ -2080,6 +2136,8 @@ static ASTNode* parser_parse_for_statement(Parser* parser) {
 }
 
 static ASTNode* parser_parse_block(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     if (parser->current_token.type != TOKEN_LEFT_BRACE) {
         return parser_parse_statement(parser);
     }
@@ -2091,7 +2149,7 @@ static ASTNode* parser_parse_block(Parser* parser) {
         ASTNode* stmt = parser_parse_statement(parser);
         if (!stmt) {
             for (int i = 0; i < statement_count; i++) {
-                ast_destroy(statements[i]);
+                ast_destroy_node(statements[i]);
             }
             ES_FREE(statements);
             return NULL;
@@ -2099,9 +2157,9 @@ static ASTNode* parser_parse_block(Parser* parser) {
         ASTNode** new_statements = (ASTNode**)ES_REALLOC(statements, (statement_count + 1) * sizeof(ASTNode*));
         if (!new_statements) {
             for (int i = 0; i < statement_count; i++) {
-                ast_destroy(statements[i]);
+                ast_destroy_node(statements[i]);
             }
-            ast_destroy(stmt);
+            ast_destroy_node(stmt);
             ES_FREE(statements);
             return NULL;
         }
@@ -2111,16 +2169,16 @@ static ASTNode* parser_parse_block(Parser* parser) {
     }
     if (parser->current_token.type != TOKEN_RIGHT_BRACE) {
         for (int i = 0; i < statement_count; i++) {
-            ast_destroy(statements[i]);
+            ast_destroy_node(statements[i]);
         }
         ES_FREE(statements);
         return NULL;
     }
     parser_advance(parser);
-    ASTNode* node = ast_create_node(AST_BLOCK);
+    ASTNode* node = ast_create_node(AST_BLOCK, line, col);
     if (!node) {
         for (int i = 0; i < statement_count; i++) {
-            ast_destroy(statements[i]);
+            ast_destroy_node(statements[i]);
         }
         ES_FREE(statements);
         return NULL;
@@ -2134,6 +2192,8 @@ static ASTNode* parser_parse_statement(Parser* parser) {
     if (!parser) {
         return NULL;
     }
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     ASTNode* node = NULL;
     switch (parser->current_token.type) {
         case TOKEN_PUBLIC:
@@ -2243,14 +2303,16 @@ static ASTNode* parser_parse_statement(Parser* parser) {
                     return NULL;
                 }
             } else if (strcmp(parser->current_token.value, "delete") == 0) {
+                int del_line = parser->current_token.line;
+                int del_col = parser->current_token.column;
                 parser_advance(parser);
                 ASTNode* expr = parser_parse_expression(parser);
                 if (!expr) {
                     return NULL;
                 }
-                ASTNode* delete_node = ast_create_node(AST_DELETE_STATEMENT);
+                ASTNode* delete_node = ast_create_node(AST_DELETE_STATEMENT, del_line, del_col);
                 if (!delete_node) {
-                    ast_destroy(expr);
+                    ast_destroy_node(expr);
                     return NULL;
                 }
                 delete_node->data.delete_stmt.value = expr;
@@ -2292,16 +2354,18 @@ static ASTNode* parser_parse_statement(Parser* parser) {
                                parser->current_token.type == TOKEN_LESS_EQUAL ||
                                parser->current_token.type == TOKEN_GREATER_EQUAL) {
                             EsTokenType operator = parser->current_token.type;
+                            int op_line = parser->current_token.line;
+                            int op_col = parser->current_token.column;
                             parser_advance(parser);
                             ASTNode* right = parser_parse_postfix_expression(parser);
                             if (!right) {
-                                ast_destroy(left);
+                                ast_destroy_node(left);
                                 return NULL;
                             }
-                            ASTNode* new_node = ast_create_node(AST_BINARY_OPERATION);
+                            ASTNode* new_node = ast_create_node(AST_BINARY_OPERATION, op_line, op_col);
                             if (!new_node) {
-                                ast_destroy(left);
-                                ast_destroy(right);
+                                ast_destroy_node(left);
+                                ast_destroy_node(right);
                                 return NULL;
                             }
                             new_node->data.binary_op.left = left;
@@ -2337,6 +2401,8 @@ ASTNode* parser_parse(Parser* parser) {
     if (!parser) {
         return NULL;
     }
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     ASTNode** statements = NULL;
     int statement_count = 0;
     while (parser->current_token.type != TOKEN_EOF) {
@@ -2351,20 +2417,20 @@ ASTNode* parser_parse(Parser* parser) {
         ASTNode** new_statements = ES_REALLOC(statements, (statement_count + 1) * sizeof(ASTNode*));
         if (!new_statements) {
             for (int i = 0; i < statement_count; i++) {
-                ast_destroy(statements[i]);
+                ast_destroy_node(statements[i]);
             }
             ES_FREE(statements);
-            ast_destroy(stmt);
+            ast_destroy_node(stmt);
             return NULL;
         }
         statements = new_statements;
         statements[statement_count] = stmt;
         statement_count++;
     }
-    ASTNode* program = ast_create_node(AST_PROGRAM);
+    ASTNode* program = ast_create_node(AST_PROGRAM, line, col);
     if (!program) {
         for (int i = 0; i < statement_count; i++) {
-            ast_destroy(statements[i]);
+            ast_destroy_node(statements[i]);
         }
         ES_FREE(statements);
         return NULL;
@@ -2375,6 +2441,8 @@ ASTNode* parser_parse(Parser* parser) {
 }
 
 static ASTNode* parser_parse_new_expression(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     if (parser->current_token.type != TOKEN_IDENTIFIER) {
         return NULL;
@@ -2405,7 +2473,7 @@ static ASTNode* parser_parse_new_expression(Parser* parser) {
                 if (!arg) {
                     ES_FREE(name);
                     for (int i = 0; i < argument_count; i++) {
-                        ast_destroy(arguments[i]);
+                        ast_destroy_node(arguments[i]);
                         if (argument_names && argument_names[i]) {
                             ES_FREE(argument_names[i]);
                         }
@@ -2424,7 +2492,7 @@ static ASTNode* parser_parse_new_expression(Parser* parser) {
                 ASTNode* arg = parser_parse_expression(parser);
                 if (!arg) {
                     for (int i = 0; i < argument_count; i++) {
-                        ast_destroy(arguments[i]);
+                        ast_destroy_node(arguments[i]);
                         if (argument_names && argument_names[i]) {
                             ES_FREE(argument_names[i]);
                         }
@@ -2445,7 +2513,7 @@ static ASTNode* parser_parse_new_expression(Parser* parser) {
             }
             if (parser->current_token.type != TOKEN_COMMA) {
                 for (int i = 0; i < argument_count; i++) {
-                    ast_destroy(arguments[i]);
+                    ast_destroy_node(arguments[i]);
                     if (argument_names && argument_names[i]) {
                         ES_FREE(argument_names[i]);
                     }
@@ -2460,7 +2528,7 @@ static ASTNode* parser_parse_new_expression(Parser* parser) {
     }
     if (parser->current_token.type != TOKEN_RIGHT_PAREN) {
         for (int i = 0; i < argument_count; i++) {
-            ast_destroy(arguments[i]);
+            ast_destroy_node(arguments[i]);
             if (argument_names && argument_names[i]) {
                 ES_FREE(argument_names[i]);
             }
@@ -2471,7 +2539,7 @@ static ASTNode* parser_parse_new_expression(Parser* parser) {
         return NULL;
     }
     parser_advance(parser);
-    ASTNode* node = ast_create_node(AST_NEW_EXPRESSION);
+    ASTNode* node = ast_create_node(AST_NEW_EXPRESSION, line, col);
     node->data.new_expr.class_name = class_name;
     node->data.new_expr.arguments = arguments;
     node->data.new_expr.argument_count = argument_count;
@@ -2480,6 +2548,8 @@ static ASTNode* parser_parse_new_expression(Parser* parser) {
 }
 
 ASTNode* parser_parse_try_statement(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     ASTNode* try_block = parser_parse_block(parser);
     if (!try_block) {
@@ -2491,9 +2561,9 @@ ASTNode* parser_parse_try_statement(Parser* parser) {
     while (parser->current_token.type == TOKEN_CATCH) {
         ASTNode* catch_clause = parser_parse_catch_clause(parser);
         if (!catch_clause) {
-            ast_destroy(try_block);
+            ast_destroy_node(try_block);
             for (int i = 0; i < catch_clause_count; i++) {
-                ast_destroy(catch_clauses[i]);
+                ast_destroy_node(catch_clauses[i]);
             }
             ES_FREE(catch_clauses);
             return NULL;
@@ -2505,22 +2575,33 @@ ASTNode* parser_parse_try_statement(Parser* parser) {
     if (parser->current_token.type == TOKEN_FINALLY) {
         finally_clause = parser_parse_finally_clause(parser);
         if (!finally_clause) {
-            ast_destroy(try_block);
+            ast_destroy_node(try_block);
             for (int i = 0; i < catch_clause_count; i++) {
-                ast_destroy(catch_clauses[i]);
+                ast_destroy_node(catch_clauses[i]);
             }
             ES_FREE(catch_clauses);
             return NULL;
         }
     }
     if (catch_clause_count == 0 && !finally_clause) {
-        ast_destroy(try_block);
+        ast_destroy_node(try_block);
         if (catch_clauses) {
             ES_FREE(catch_clauses);
         }
         return NULL;
     }
-    ASTNode* node = ast_create_node(AST_TRY_STATEMENT);
+    ASTNode* node = ast_create_node(AST_TRY_STATEMENT, line, col);
+    if (!node) {
+        ast_destroy_node(try_block);
+        for (int i = 0; i < catch_clause_count; i++) {
+            ast_destroy_node(catch_clauses[i]);
+        }
+        ES_FREE(catch_clauses);
+        if (finally_clause) {
+            ast_destroy_node(finally_clause);
+        }
+        return NULL;
+    }
     node->data.try_stmt.try_block = try_block;
     node->data.try_stmt.catch_clauses = catch_clauses;
     node->data.try_stmt.catch_clause_count = catch_clause_count;
@@ -2529,6 +2610,8 @@ ASTNode* parser_parse_try_statement(Parser* parser) {
 }
 
 ASTNode* parser_parse_throw_statement(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     ASTNode* exception_expr = NULL;
     if (parser->current_token.type != TOKEN_SEMICOLON && parser->current_token.type != TOKEN_EOF) {
@@ -2540,12 +2623,20 @@ ASTNode* parser_parse_throw_statement(Parser* parser) {
     if (parser->current_token.type == TOKEN_SEMICOLON) {
         parser_advance(parser);
     }
-    ASTNode* node = ast_create_node(AST_THROW_STATEMENT);
+    ASTNode* node = ast_create_node(AST_THROW_STATEMENT, line, col);
+    if (!node) {
+        if (exception_expr) {
+            ast_destroy_node(exception_expr);
+        }
+        return NULL;
+    }
     node->data.throw_stmt.exception_expr = exception_expr;
     return node;
 }
 
 ASTNode* parser_parse_catch_clause(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     char* exception_type = NULL;
     char* exception_var = NULL;
@@ -2590,7 +2681,17 @@ ASTNode* parser_parse_catch_clause(Parser* parser) {
         }
         return NULL;
     }
-    ASTNode* node = ast_create_node(AST_CATCH_CLAUSE);
+    ASTNode* node = ast_create_node(AST_CATCH_CLAUSE, line, col);
+    if (!node) {
+        if (exception_type) {
+            ES_FREE(exception_type);
+        }
+        if (exception_var) {
+            ES_FREE(exception_var);
+        }
+        ast_destroy_node(catch_block);
+        return NULL;
+    }
     node->data.catch_clause.exception_type = exception_type;
     node->data.catch_clause.exception_var = exception_var;
     node->data.catch_clause.catch_block = catch_block;
@@ -2598,17 +2699,25 @@ ASTNode* parser_parse_catch_clause(Parser* parser) {
 }
 
 ASTNode* parser_parse_finally_clause(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     ASTNode* finally_block = parser_parse_block(parser);
     if (!finally_block) {
         return NULL;
     }
-    ASTNode* node = ast_create_node(AST_FINALLY_CLAUSE);
+    ASTNode* node = ast_create_node(AST_FINALLY_CLAUSE, line, col);
+    if (!node) {
+        ast_destroy_node(finally_block);
+        return NULL;
+    }
     node->data.finally_clause.finally_block = finally_block;
     return node;
 }
 
 ASTNode* parser_parse_template_declaration(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     if (parser->current_token.type != TOKEN_LESS) {
         return NULL;
@@ -2621,7 +2730,7 @@ ASTNode* parser_parse_template_declaration(Parser* parser) {
             ASTNode* param = parser_parse_template_parameter(parser);
             if (!param) {
                 for (int i = 0; i < parameter_count; i++) {
-                    ast_destroy(parameters[i]);
+                    ast_destroy_node(parameters[i]);
                 }
                 ES_FREE(parameters);
                 return NULL;
@@ -2634,7 +2743,7 @@ ASTNode* parser_parse_template_declaration(Parser* parser) {
             }
             if (parser->current_token.type != TOKEN_COMMA) {
                 for (int i = 0; i < parameter_count; i++) {
-                    ast_destroy(parameters[i]);
+                    ast_destroy_node(parameters[i]);
                 }
                 ES_FREE(parameters);
                 return NULL;
@@ -2644,7 +2753,7 @@ ASTNode* parser_parse_template_declaration(Parser* parser) {
     }
     if (parser->current_token.type != TOKEN_GREATER) {
         for (int i = 0; i < parameter_count; i++) {
-            ast_destroy(parameters[i]);
+            ast_destroy_node(parameters[i]);
         }
         ES_FREE(parameters);
         return NULL;
@@ -2657,19 +2766,27 @@ ASTNode* parser_parse_template_declaration(Parser* parser) {
         declaration = parser_parse_function_declaration(parser);
     } else {
         for (int i = 0; i < parameter_count; i++) {
-            ast_destroy(parameters[i]);
+            ast_destroy_node(parameters[i]);
         }
         ES_FREE(parameters);
         return NULL;
     }
     if (!declaration) {
         for (int i = 0; i < parameter_count; i++) {
-            ast_destroy(parameters[i]);
+            ast_destroy_node(parameters[i]);
         }
         ES_FREE(parameters);
         return NULL;
     }
-    ASTNode* node = ast_create_node(AST_TEMPLATE_DECLARATION);
+    ASTNode* node = ast_create_node(AST_TEMPLATE_DECLARATION, line, col);
+    if (!node) {
+        for (int i = 0; i < parameter_count; i++) {
+            ast_destroy_node(parameters[i]);
+        }
+        ES_FREE(parameters);
+        ast_destroy_node(declaration);
+        return NULL;
+    }
     node->data.template_decl.parameters = parameters;
     node->data.template_decl.parameter_count = parameter_count;
     node->data.template_decl.declaration = declaration;
@@ -2677,6 +2794,8 @@ ASTNode* parser_parse_template_declaration(Parser* parser) {
 }
 
 ASTNode* parser_parse_template_parameter(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     int is_typename = 0;
     if (parser->current_token.type == TOKEN_TYPENAME) {
         is_typename = 1;
@@ -2693,12 +2812,18 @@ ASTNode* parser_parse_template_parameter(Parser* parser) {
     }
     char* param_name = ES_STRDUP(parser->current_token.value);
     parser_advance(parser);
-    ASTNode* node = ast_create_node(AST_TEMPLATE_PARAMETER);
+    ASTNode* node = ast_create_node(AST_TEMPLATE_PARAMETER, line, col);
+    if (!node) {
+        ES_FREE(param_name);
+        return NULL;
+    }
     node->data.template_param.param_name = param_name;
     return node;
 }
 
 static ASTNode* parser_parse_type_declaration(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     EsTokenType type_token = parser->current_token.type;
     const char* type_str = token_type_to_string(type_token);
     char* type_name = ES_STRDUP(type_str ? type_str : "UNKNOWN");
@@ -2713,7 +2838,9 @@ static ASTNode* parser_parse_type_declaration(Parser* parser) {
     token_free(&next_token);
     if (next_type == TOKEN_LEFT_PAREN) {
         parser_advance(parser);
-        ASTNode* result = parser_parse_typed_function_declaration(parser, type_token, identifier_name, 0);
+        int line = parser->current_token.line;
+        int col = parser->current_token.column;
+        ASTNode* result = parser_parse_typed_function_declaration(parser, type_token, identifier_name, 0, line, col);
         ES_FREE(type_name);
         return result;
     }
@@ -2735,11 +2862,11 @@ static ASTNode* parser_parse_type_declaration(Parser* parser) {
             return NULL;
         }
     }
-    ASTNode* node = ast_create_node(AST_VARIABLE_DECLARATION);
+    ASTNode* node = ast_create_node(AST_VARIABLE_DECLARATION, line, col);
     if (!node) {
         ES_FREE(type_name);
         ES_FREE(identifier_name);
-        if (value) ast_destroy(value);
+        if (value) ast_destroy_node(value);
         return NULL;
     }
     node->data.variable_decl.name = identifier_name;
@@ -2757,6 +2884,8 @@ static ASTNode* parser_parse_type_declaration(Parser* parser) {
 }
 
 ASTNode* parser_parse_switch_statement(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     if (parser->current_token.type != TOKEN_LEFT_PAREN) {
         fprintf(stderr, "Expected '(' after 'switch'\n");
@@ -2771,14 +2900,14 @@ ASTNode* parser_parse_switch_statement(Parser* parser) {
     if (parser->current_token.type != TOKEN_RIGHT_PAREN) {
         fprintf(stderr, "Expected ')' after switch condition\n");
         fflush(stderr);
-        ast_destroy(condition);
+        ast_destroy_node(condition);
         return NULL;
     }
     parser_advance(parser);
     if (parser->current_token.type != TOKEN_LEFT_BRACE) {
         fprintf(stderr, "Expected '{' after switch condition\n");
         fflush(stderr);
-        ast_destroy(condition);
+        ast_destroy_node(condition);
         return NULL;
     }
     parser_advance(parser);
@@ -2790,12 +2919,12 @@ ASTNode* parser_parse_switch_statement(Parser* parser) {
             ASTNode* case_node = parser_parse_case_clause(parser);
             if (!case_node) {
                 for (int i = 0; i < case_count; i++) {
-                    ast_destroy(cases[i]);
+                    ast_destroy_node(cases[i]);
                 }
                 if (cases) {
                     ES_FREE(cases);
                 }
-                ast_destroy(condition);
+                ast_destroy_node(condition);
                 return NULL;
             }
             cases = (ASTNode**)ES_REALLOC(cases, (case_count + 1) * sizeof(ASTNode*));
@@ -2806,48 +2935,61 @@ ASTNode* parser_parse_switch_statement(Parser* parser) {
                 fprintf(stderr, "Multiple default cases in switch statement\n");
                 fflush(stderr);
                 for (int i = 0; i < case_count; i++) {
-                    ast_destroy(cases[i]);
+                    ast_destroy_node(cases[i]);
                 }
                 if (cases) {
                     ES_FREE(cases);
                 }
-                ast_destroy(condition);
+                ast_destroy_node(condition);
                 return NULL;
             }
             default_case = parser_parse_default_clause(parser);
             if (!default_case) {
                 for (int i = 0; i < case_count; i++) {
-                    ast_destroy(cases[i]);
+                    ast_destroy_node(cases[i]);
                 }
                 if (cases) {
                     ES_FREE(cases);
                 }
-                ast_destroy(condition);
+                ast_destroy_node(condition);
                 return NULL;
             }
         } else {
             for (int i = 0; i < case_count; i++) {
-                ast_destroy(cases[i]);
+                ast_destroy_node(cases[i]);
             }
             if (cases) {
                 ES_FREE(cases);
             }
-            ast_destroy(condition);
+            ast_destroy_node(condition);
             return NULL;
         }
     }
     if (parser->current_token.type != TOKEN_RIGHT_BRACE) {
         for (int i = 0; i < case_count; i++) {
-            ast_destroy(cases[i]);
+            ast_destroy_node(cases[i]);
         }
         if (cases) {
             ES_FREE(cases);
         }
-        ast_destroy(condition);
+        ast_destroy_node(condition);
         return NULL;
     }
     parser_advance(parser);
-    ASTNode* node = ast_create_node(AST_SWITCH_STATEMENT);
+    ASTNode* node = ast_create_node(AST_SWITCH_STATEMENT, line, col);
+    if (!node) {
+        for (int i = 0; i < case_count; i++) {
+            ast_destroy_node(cases[i]);
+        }
+        if (cases) {
+            ES_FREE(cases);
+        }
+        if (default_case) {
+            ast_destroy_node(default_case);
+        }
+        ast_destroy_node(condition);
+        return NULL;
+    }
     node->data.switch_stmt.expression = condition;
     node->data.switch_stmt.cases = cases;
     node->data.switch_stmt.case_count = case_count;
@@ -2856,13 +2998,15 @@ ASTNode* parser_parse_switch_statement(Parser* parser) {
 }
 
 ASTNode* parser_parse_case_clause(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     ASTNode* value = parser_parse_expression(parser);
     if (!value) {
         return NULL;
     }
     if (parser->current_token.type != TOKEN_COLON) {
-        ast_destroy(value);
+        ast_destroy_node(value);
         return NULL;
     }
     parser_advance(parser);
@@ -2875,19 +3019,29 @@ ASTNode* parser_parse_case_clause(Parser* parser) {
         ASTNode* stmt = parser_parse_statement(parser);
         if (!stmt) {
             for (int i = 0; i < statement_count; i++) {
-                ast_destroy(statements[i]);
+                ast_destroy_node(statements[i]);
             }
             if (statements) {
                 ES_FREE(statements);
             }
-            ast_destroy(value);
+            ast_destroy_node(value);
             return NULL;
         }
         statements = (ASTNode**)ES_REALLOC(statements, (statement_count + 1) * sizeof(ASTNode*));
         statements[statement_count] = stmt;
         statement_count++;
     }
-    ASTNode* node = ast_create_node(AST_CASE_CLAUSE);
+    ASTNode* node = ast_create_node(AST_CASE_CLAUSE, line, col);
+    if (!node) {
+        for (int i = 0; i < statement_count; i++) {
+            ast_destroy_node(statements[i]);
+        }
+        if (statements) {
+            ES_FREE(statements);
+        }
+        ast_destroy_node(value);
+        return NULL;
+    }
     node->data.case_clause.value = value;
     node->data.case_clause.statements = statements;
     node->data.case_clause.statement_count = statement_count;
@@ -2895,6 +3049,8 @@ ASTNode* parser_parse_case_clause(Parser* parser) {
 }
 
 ASTNode* parser_parse_default_clause(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     if (parser->current_token.type != TOKEN_COLON) {
         return NULL;
@@ -2909,7 +3065,7 @@ ASTNode* parser_parse_default_clause(Parser* parser) {
         ASTNode* stmt = parser_parse_statement(parser);
         if (!stmt) {
             for (int i = 0; i < statement_count; i++) {
-                ast_destroy(statements[i]);
+                ast_destroy_node(statements[i]);
             }
             if (statements) {
                 ES_FREE(statements);
@@ -2920,23 +3076,38 @@ ASTNode* parser_parse_default_clause(Parser* parser) {
         statements[statement_count] = stmt;
         statement_count++;
     }
-    ASTNode* node = ast_create_node(AST_DEFAULT_CLAUSE);
+    ASTNode* node = ast_create_node(AST_DEFAULT_CLAUSE, line, col);
+    if (!node) {
+        for (int i = 0; i < statement_count; i++) {
+            ast_destroy_node(statements[i]);
+        }
+        if (statements) {
+            ES_FREE(statements);
+        }
+        return NULL;
+    }
     node->data.default_clause.statements = statements;
     node->data.default_clause.statement_count = statement_count;
     return node;
 }
 
 ASTNode* parser_parse_break_statement(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
-    return ast_create_node(AST_BREAK_STATEMENT);
+    return ast_create_node(AST_BREAK_STATEMENT, line, col);
 }
 
 ASTNode* parser_parse_continue_statement(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
-    return ast_create_node(AST_CONTINUE_STATEMENT);
+    return ast_create_node(AST_CONTINUE_STATEMENT, line, col);
 }
 
 ASTNode* parser_parse_foreach_statement(Parser* parser) {
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     parser_advance(parser);
     if (parser->current_token.type != TOKEN_LEFT_PAREN) {
         return NULL;
@@ -2973,7 +3144,7 @@ ASTNode* parser_parse_foreach_statement(Parser* parser) {
     
     if (parser->current_token.type != TOKEN_RIGHT_PAREN) {
         ES_FREE(var_name);
-        ast_destroy(iterable);
+        ast_destroy_node(iterable);
         return NULL;
     }
     parser_advance(parser);
@@ -2981,15 +3152,15 @@ ASTNode* parser_parse_foreach_statement(Parser* parser) {
     ASTNode* body = parser_parse_statement(parser);
     if (!body) {
         ES_FREE(var_name);
-        ast_destroy(iterable);
+        ast_destroy_node(iterable);
         return NULL;
     }
     
-    ASTNode* node = ast_create_node(AST_FOREACH_STATEMENT);
+    ASTNode* node = ast_create_node(AST_FOREACH_STATEMENT, line, col);
     if (!node) {
         ES_FREE(var_name);
-        ast_destroy(iterable);
-        ast_destroy(body);
+        ast_destroy_node(iterable);
+        ast_destroy_node(body);
         return NULL;
     }
     node->data.foreach_stmt.var_name = var_name;
@@ -3008,6 +3179,8 @@ ASTNode* parser_parse_foreach_statement(Parser* parser) {
 static ASTNode* parser_parse_property_declaration(Parser* parser, EsTokenType type, char* name, ASTNode** attributes, int attribute_count) {
     if (!parser || !name) return NULL;
     
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     
     if (parser->current_token.type != TOKEN_LEFT_BRACE) {
         ES_FREE(name);
@@ -3033,10 +3206,10 @@ static ASTNode* parser_parse_property_declaration(Parser* parser, EsTokenType ty
                     ES_FREE(name);
                     return NULL;
                 }
-                getter = ast_create_node(AST_PROPERTY_GETTER);
+                getter = ast_create_node(AST_PROPERTY_GETTER, line, col);
                 if (!getter) {
                     ES_FREE(name);
-                    ast_destroy(expr);
+                    ast_destroy_node(expr);
                     return NULL;
                 }
                 getter->data.property_getter.body = expr;
@@ -3051,17 +3224,17 @@ static ASTNode* parser_parse_property_declaration(Parser* parser, EsTokenType ty
                     ES_FREE(name);
                     return NULL;
                 }
-                getter = ast_create_node(AST_PROPERTY_GETTER);
+                getter = ast_create_node(AST_PROPERTY_GETTER, line, col);
                 if (!getter) {
                     ES_FREE(name);
-                    ast_destroy(body);
+                    ast_destroy_node(body);
                     return NULL;
                 }
                 getter->data.property_getter.body = body;
             } else if (parser->current_token.type == TOKEN_SEMICOLON) {
                 
                 parser_advance(parser);
-                getter = ast_create_node(AST_PROPERTY_GETTER);
+                getter = ast_create_node(AST_PROPERTY_GETTER, line, col);
                 if (!getter) {
                     ES_FREE(name);
                     return NULL;
@@ -3078,14 +3251,14 @@ static ASTNode* parser_parse_property_declaration(Parser* parser, EsTokenType ty
                 ASTNode* expr = parser_parse_expression(parser);
                 if (!expr) {
                     ES_FREE(name);
-                    ast_destroy(getter);
+                    ast_destroy_node(getter);
                     return NULL;
                 }
-                setter = ast_create_node(AST_PROPERTY_SETTER);
+                setter = ast_create_node(AST_PROPERTY_SETTER, line, col);
                 if (!setter) {
                     ES_FREE(name);
-                    ast_destroy(expr);
-                    ast_destroy(getter);
+                    ast_destroy_node(expr);
+                    ast_destroy_node(getter);
                     return NULL;
                 }
                 setter->data.property_setter.value_param_name = ES_STRDUP("value");
@@ -3099,14 +3272,14 @@ static ASTNode* parser_parse_property_declaration(Parser* parser, EsTokenType ty
                 ASTNode* body = parser_parse_block(parser);
                 if (!body) {
                     ES_FREE(name);
-                    ast_destroy(getter);
+                    ast_destroy_node(getter);
                     return NULL;
                 }
-                setter = ast_create_node(AST_PROPERTY_SETTER);
+                setter = ast_create_node(AST_PROPERTY_SETTER, line, col);
                 if (!setter) {
                     ES_FREE(name);
-                    ast_destroy(body);
-                    ast_destroy(getter);
+                    ast_destroy_node(body);
+                    ast_destroy_node(getter);
                     return NULL;
                 }
                 setter->data.property_setter.value_param_name = ES_STRDUP("value");
@@ -3114,10 +3287,10 @@ static ASTNode* parser_parse_property_declaration(Parser* parser, EsTokenType ty
             } else if (parser->current_token.type == TOKEN_SEMICOLON) {
                 
                 parser_advance(parser);
-                setter = ast_create_node(AST_PROPERTY_SETTER);
+                setter = ast_create_node(AST_PROPERTY_SETTER, line, col);
                 if (!setter) {
                     ES_FREE(name);
-                    ast_destroy(getter);
+                    ast_destroy_node(getter);
                     return NULL;
                 }
                 setter->data.property_setter.value_param_name = ES_STRDUP("value");
@@ -3132,8 +3305,8 @@ static ASTNode* parser_parse_property_declaration(Parser* parser, EsTokenType ty
     
     if (parser->current_token.type != TOKEN_RIGHT_BRACE) {
         ES_FREE(name);
-        ast_destroy(getter);
-        ast_destroy(setter);
+        ast_destroy_node(getter);
+        ast_destroy_node(setter);
         return NULL;
     }
     parser_advance(parser);
@@ -3144,8 +3317,8 @@ static ASTNode* parser_parse_property_declaration(Parser* parser, EsTokenType ty
         initial_value = parser_parse_expression(parser);
         if (!initial_value) {
             ES_FREE(name);
-            ast_destroy(getter);
-            ast_destroy(setter);
+            ast_destroy_node(getter);
+            ast_destroy_node(setter);
             return NULL;
         }
         if (parser->current_token.type == TOKEN_SEMICOLON) {
@@ -3153,12 +3326,12 @@ static ASTNode* parser_parse_property_declaration(Parser* parser, EsTokenType ty
         }
     }
     
-    ASTNode* node = ast_create_node(AST_PROPERTY_DECLARATION);
+    ASTNode* node = ast_create_node(AST_PROPERTY_DECLARATION, line, col);
     if (!node) {
         ES_FREE(name);
-        ast_destroy(getter);
-        ast_destroy(setter);
-        ast_destroy(initial_value);
+        ast_destroy_node(getter);
+        ast_destroy_node(setter);
+        ast_destroy_node(initial_value);
         return NULL;
     }
     
@@ -3255,7 +3428,8 @@ static int parser_parse_lambda_parameters(Parser* parser, char*** parameters, in
 
 static ASTNode* parser_parse_lambda_expression(Parser* parser, char** parameters, int parameter_count) {
     if (!parser) return NULL;
-    
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     
     char** lambda_params = parameters;
     int lambda_param_count = parameter_count;
@@ -3276,7 +3450,7 @@ static ASTNode* parser_parse_lambda_expression(Parser* parser, char** parameters
     }
     parser_advance(parser);
     
-    ASTNode* node = ast_create_node(AST_LAMBDA_EXPRESSION);
+    ASTNode* node = ast_create_node(AST_LAMBDA_EXPRESSION, line, col);
     if (!node) {
         for (int i = 0; i < lambda_param_count; i++) {
             ES_FREE(lambda_params[i]);
@@ -3317,6 +3491,9 @@ static ASTNode* parser_parse_lambda_expression(Parser* parser, char** parameters
 static ASTNode* parser_parse_attribute(Parser* parser) {
     if (!parser || parser->current_token.type != TOKEN_LEFT_BRACKET) return NULL;
     
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
+    
     parser_advance(parser);
     
     if (parser->current_token.type != TOKEN_IDENTIFIER) {
@@ -3345,7 +3522,7 @@ static ASTNode* parser_parse_attribute(Parser* parser) {
             ASTNode* arg = parser_parse_expression(parser);
             if (!arg) {
                 for (int i = 0; i < argument_count; i++) {
-                    ast_destroy(arguments[i]);
+                    ast_destroy_node(arguments[i]);
                 }
                 ES_FREE(arguments);
                 ES_FREE(name);
@@ -3356,9 +3533,9 @@ static ASTNode* parser_parse_attribute(Parser* parser) {
                 capacity *= 2;
                 ASTNode** new_args = (ASTNode**)ES_REALLOC(arguments, capacity * sizeof(ASTNode*));
                 if (!new_args) {
-                    ast_destroy(arg);
+                    ast_destroy_node(arg);
                     for (int i = 0; i < argument_count; i++) {
-                        ast_destroy(arguments[i]);
+                        ast_destroy_node(arguments[i]);
                     }
                     ES_FREE(arguments);
                     ES_FREE(name);
@@ -3372,9 +3549,9 @@ static ASTNode* parser_parse_attribute(Parser* parser) {
             if (parser->current_token.type == TOKEN_COMMA) {
                 parser_advance(parser);
             } else if (parser->current_token.type != TOKEN_RIGHT_PAREN) {
-                ast_destroy(arg);
+                ast_destroy_node(arg);
                 for (int i = 0; i < argument_count; i++) {
-                    ast_destroy(arguments[i]);
+                    ast_destroy_node(arguments[i]);
                 }
                 ES_FREE(arguments);
                 ES_FREE(name);
@@ -3387,7 +3564,7 @@ static ASTNode* parser_parse_attribute(Parser* parser) {
     
     if (parser->current_token.type != TOKEN_RIGHT_BRACKET) {
         for (int i = 0; i < argument_count; i++) {
-            ast_destroy(arguments[i]);
+            ast_destroy_node(arguments[i]);
         }
         ES_FREE(arguments);
         ES_FREE(name);
@@ -3395,10 +3572,10 @@ static ASTNode* parser_parse_attribute(Parser* parser) {
     }
     parser_advance(parser);
     
-    ASTNode* node = ast_create_node(AST_ATTRIBUTE);
+    ASTNode* node = ast_create_node(AST_ATTRIBUTE, line, col);
     if (!node) {
         for (int i = 0; i < argument_count; i++) {
-            ast_destroy(arguments[i]);
+            ast_destroy_node(arguments[i]);
         }
         ES_FREE(arguments);
         ES_FREE(name);
@@ -3419,6 +3596,9 @@ static ASTNode* parser_parse_attribute(Parser* parser) {
 static ASTNode* parser_parse_attributes(Parser* parser) {
     if (!parser || parser->current_token.type != TOKEN_LEFT_BRACKET) return NULL;
     
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
+    
     int capacity = 4;
     int count = 0;
     ASTNode** attributes = (ASTNode**)ES_MALLOC(capacity * sizeof(ASTNode*));
@@ -3428,7 +3608,7 @@ static ASTNode* parser_parse_attributes(Parser* parser) {
         ASTNode* attr = parser_parse_attribute(parser);
         if (!attr) {
             for (int i = 0; i < count; i++) {
-                ast_destroy(attributes[i]);
+                ast_destroy_node(attributes[i]);
             }
             ES_FREE(attributes);
             return NULL;
@@ -3438,9 +3618,9 @@ static ASTNode* parser_parse_attributes(Parser* parser) {
             capacity *= 2;
             ASTNode** new_attrs = (ASTNode**)ES_REALLOC(attributes, capacity * sizeof(ASTNode*));
             if (!new_attrs) {
-                ast_destroy(attr);
+                ast_destroy_node(attr);
                 for (int i = 0; i < count; i++) {
-                    ast_destroy(attributes[i]);
+                    ast_destroy_node(attributes[i]);
                 }
                 ES_FREE(attributes);
                 return NULL;
@@ -3451,10 +3631,10 @@ static ASTNode* parser_parse_attributes(Parser* parser) {
         attributes[count++] = attr;
     }
     
-    ASTNode* node = ast_create_node(AST_ATTRIBUTE_LIST);
+    ASTNode* node = ast_create_node(AST_ATTRIBUTE_LIST, line, col);
     if (!node) {
         for (int i = 0; i < count; i++) {
-            ast_destroy(attributes[i]);
+            ast_destroy_node(attributes[i]);
         }
         ES_FREE(attributes);
         return NULL;
@@ -3472,6 +3652,9 @@ static ASTNode* parser_parse_attributes(Parser* parser) {
 
 static ASTNode* parser_parse_linq_query(Parser* parser) {
     if (!parser || parser->current_token.type != TOKEN_FROM) return NULL;
+    
+    int line = parser->current_token.line;
+    int col = parser->current_token.column;
     
     parser_advance(parser);
     
@@ -3496,10 +3679,10 @@ static ASTNode* parser_parse_linq_query(Parser* parser) {
         return NULL;
     }
     
-    ASTNode* from_clause = ast_create_node(AST_LINQ_FROM);
+    ASTNode* from_clause = ast_create_node(AST_LINQ_FROM, line, col);
     if (!from_clause) {
         ES_FREE(var_name);
-        ast_destroy(source);
+        ast_destroy_node(source);
         return NULL;
     }
     
@@ -3512,7 +3695,7 @@ static ASTNode* parser_parse_linq_query(Parser* parser) {
     int clause_count = 0;
     ASTNode** clauses = (ASTNode**)ES_MALLOC(capacity * sizeof(ASTNode*));
     if (!clauses) {
-        ast_destroy(from_clause);
+        ast_destroy_node(from_clause);
         return NULL;
     }
     
@@ -3524,21 +3707,21 @@ static ASTNode* parser_parse_linq_query(Parser* parser) {
             ASTNode* condition = parser_parse_expression(parser);
             if (!condition) {
                 for (int i = 0; i < clause_count; i++) {
-                    ast_destroy(clauses[i]);
+                    ast_destroy_node(clauses[i]);
                 }
                 ES_FREE(clauses);
-                ast_destroy(from_clause);
+                ast_destroy_node(from_clause);
                 return NULL;
             }
             
-            ASTNode* where_clause = ast_create_node(AST_LINQ_WHERE);
+            ASTNode* where_clause = ast_create_node(AST_LINQ_WHERE, line, col);
             if (!where_clause) {
-                ast_destroy(condition);
+                ast_destroy_node(condition);
                 for (int i = 0; i < clause_count; i++) {
-                    ast_destroy(clauses[i]);
+                    ast_destroy_node(clauses[i]);
                 }
                 ES_FREE(clauses);
-                ast_destroy(from_clause);
+                ast_destroy_node(from_clause);
                 return NULL;
             }
             
@@ -3548,12 +3731,12 @@ static ASTNode* parser_parse_linq_query(Parser* parser) {
                 capacity *= 2;
                 ASTNode** new_clauses = (ASTNode**)ES_REALLOC(clauses, capacity * sizeof(ASTNode*));
                 if (!new_clauses) {
-                    ast_destroy(where_clause);
+                    ast_destroy_node(where_clause);
                     for (int i = 0; i < clause_count; i++) {
-                        ast_destroy(clauses[i]);
+                        ast_destroy_node(clauses[i]);
                     }
                     ES_FREE(clauses);
-                    ast_destroy(from_clause);
+                    ast_destroy_node(from_clause);
                     return NULL;
                 }
                 clauses = new_clauses;
@@ -3565,10 +3748,10 @@ static ASTNode* parser_parse_linq_query(Parser* parser) {
             ASTNode* expr = parser_parse_expression(parser);
             if (!expr) {
                 for (int i = 0; i < clause_count; i++) {
-                    ast_destroy(clauses[i]);
+                    ast_destroy_node(clauses[i]);
                 }
                 ES_FREE(clauses);
-                ast_destroy(from_clause);
+                ast_destroy_node(from_clause);
                 return NULL;
             }
             
@@ -3582,14 +3765,14 @@ static ASTNode* parser_parse_linq_query(Parser* parser) {
                 }
             }
             
-            ASTNode* orderby_clause = ast_create_node(AST_LINQ_ORDERBY);
+            ASTNode* orderby_clause = ast_create_node(AST_LINQ_ORDERBY, line, col);
             if (!orderby_clause) {
-                ast_destroy(expr);
+                ast_destroy_node(expr);
                 for (int i = 0; i < clause_count; i++) {
-                    ast_destroy(clauses[i]);
+                    ast_destroy_node(clauses[i]);
                 }
                 ES_FREE(clauses);
-                ast_destroy(from_clause);
+                ast_destroy_node(from_clause);
                 return NULL;
             }
             
@@ -3600,12 +3783,12 @@ static ASTNode* parser_parse_linq_query(Parser* parser) {
                 capacity *= 2;
                 ASTNode** new_clauses = (ASTNode**)ES_REALLOC(clauses, capacity * sizeof(ASTNode*));
                 if (!new_clauses) {
-                    ast_destroy(orderby_clause);
+                    ast_destroy_node(orderby_clause);
                     for (int i = 0; i < clause_count; i++) {
-                        ast_destroy(clauses[i]);
+                        ast_destroy_node(clauses[i]);
                     }
                     ES_FREE(clauses);
-                    ast_destroy(from_clause);
+                    ast_destroy_node(from_clause);
                     return NULL;
                 }
                 clauses = new_clauses;
@@ -3617,21 +3800,21 @@ static ASTNode* parser_parse_linq_query(Parser* parser) {
             ASTNode* expr = parser_parse_expression(parser);
             if (!expr) {
                 for (int i = 0; i < clause_count; i++) {
-                    ast_destroy(clauses[i]);
+                    ast_destroy_node(clauses[i]);
                 }
                 ES_FREE(clauses);
-                ast_destroy(from_clause);
+                ast_destroy_node(from_clause);
                 return NULL;
             }
             
-            select_clause = ast_create_node(AST_LINQ_SELECT);
+            select_clause = ast_create_node(AST_LINQ_SELECT, line, col);
             if (!select_clause) {
-                ast_destroy(expr);
+                ast_destroy_node(expr);
                 for (int i = 0; i < clause_count; i++) {
-                    ast_destroy(clauses[i]);
+                    ast_destroy_node(clauses[i]);
                 }
                 ES_FREE(clauses);
-                ast_destroy(from_clause);
+                ast_destroy_node(from_clause);
                 return NULL;
             }
             
@@ -3644,14 +3827,14 @@ static ASTNode* parser_parse_linq_query(Parser* parser) {
         }
     }
     
-    ASTNode* node = ast_create_node(AST_LINQ_QUERY);
+    ASTNode* node = ast_create_node(AST_LINQ_QUERY, line, col);
     if (!node) {
         for (int i = 0; i < clause_count; i++) {
-            ast_destroy(clauses[i]);
+            ast_destroy_node(clauses[i]);
         }
         ES_FREE(clauses);
-        ast_destroy(from_clause);
-        ast_destroy(select_clause);
+        ast_destroy_node(from_clause);
+        ast_destroy_node(select_clause);
         return NULL;
     }
     

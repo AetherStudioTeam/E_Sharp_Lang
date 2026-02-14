@@ -72,7 +72,7 @@ void es_compile_pipeline_destroy(EsCompilePipeline* pipeline) {
         ES_FREE(pipeline->semantic_result);
     }
     if (pipeline->ast) {
-        ast_destroy(pipeline->ast);
+        ast_destroy_node(pipeline->ast);
     }
     if (pipeline->parser) {
         parser_destroy(pipeline->parser);

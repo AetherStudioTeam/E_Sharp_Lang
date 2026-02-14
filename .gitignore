@@ -1,12 +1,24 @@
-Test/
-Tool/
+# 编译输出
 build/
 obj/
+bin/
+
+# 依赖与工具
 LINKER-LIB/
-DEV-DOC/
-.trae/
+Tool/
+
+# IDE / 编辑器
 .idea/
-.gitignore
+.trae/
+
+# 文档与临时文件
+docs/
+DEV-DOC/
 *.txt
 *.md
-docs/
+
+# 测试
+Test/
+
+# 版本控制
+.gitignore
