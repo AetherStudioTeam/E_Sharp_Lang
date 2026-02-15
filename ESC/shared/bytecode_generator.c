@@ -12,6 +12,7 @@ struct EsBytecodeGenerator {
 
 EsBytecodeGenerator* es_bytecode_generator_create(void) {
     EsBytecodeGenerator* generator = malloc(sizeof(EsBytecodeGenerator));
+    if (!generator) return NULL;
     return generator;
 }
 
@@ -48,7 +49,6 @@ void es_bytecode_generator_write_short(EsChunk* chunk, uint16_t value) {
 }
 
 int es_bytecode_generator_add_constant(EsChunk* chunk, EsValue value) {
-    printf("es_bytecode_generator_add_constant: adding constant, type=%d, current count=%d\n", value.type, chunk->constants.count);
     if (chunk->constants.capacity < chunk->constants.count + 1) {
         int old_capacity = chunk->constants.capacity;
         chunk->constants.capacity = old_capacity < 8 ? 8 : old_capacity * 2;
@@ -56,7 +56,6 @@ int es_bytecode_generator_add_constant(EsChunk* chunk, EsValue value) {
     }
     
     chunk->constants.values[chunk->constants.count] = value;
-    printf("es_bytecode_generator_add_constant: constant added, new count=%d\n", chunk->constants.count + 1);
     return chunk->constants.count++;
 }
 
@@ -93,14 +92,9 @@ bool es_bytecode_generator_serialize_to_file(EsChunk* chunk, const char* filenam
     }
     
     uint32_t constant_count = chunk->constants.count;
-    printf("es_bytecode_generator_serialize_to_file: chunk->constants.count=%d\n", chunk->constants.count);
-    printf("es_bytecode_generator_serialize_to_file: chunk->constants.capacity=%d\n", chunk->constants.capacity);
-    printf("es_bytecode_generator_serialize_to_file: chunk->constants.values=%p\n", (void*)chunk->constants.values);
-    printf("es_bytecode_generator_serialize_to_file: writing constant_count=%d\n", constant_count);
     fwrite(&constant_count, sizeof(uint32_t), 1, file);
     for (int i = 0; i < constant_count; i++) {
         EsValue value = chunk->constants.values[i];
-        printf("es_bytecode_generator_serialize_to_file: writing constant %d, type=%d\n", i, value.type);
         fwrite(&value.type, sizeof(EsValueType), 1, file);
         
         switch (value.type) {

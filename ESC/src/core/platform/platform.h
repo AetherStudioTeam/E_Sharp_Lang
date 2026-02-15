@@ -1,5 +1,5 @@
-#ifndef PLATFORM_H
-#define PLATFORM_H
+#ifndef ES_PLATFORM_H
+#define ES_PLATFORM_H
 
 
 #ifdef _WIN32
@@ -168,7 +168,6 @@
     #define ES_PATH_SEPARATOR_STR "/"
 #endif
 
-/* 动态库加载接口 */
 #ifdef _WIN32
     #define es_load_library(name) LoadLibrary(name)
     #define es_free_library(handle) FreeLibrary(handle)
@@ -182,7 +181,6 @@
     typedef void* es_lib_handle_t;
 #endif
 
-/* 原子操作 */
 #ifdef _WIN32
     #define es_atomic_inc(ptr) InterlockedIncrement(ptr)
     #define es_atomic_dec(ptr) InterlockedDecrement(ptr)
@@ -199,7 +197,6 @@
         __atomic_compare_exchange_n(ptr, cmp, xchg, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)
 #endif
 
-/* 错误处理 */
 #ifdef _WIN32
     #define es_get_last_error() GetLastError()
     #define es_set_last_error(err) SetLastError(err)
@@ -219,7 +216,6 @@
     #define ES_ERROR_OUT_OF_MEMORY ENOMEM
 #endif
 
-/* 编译器特定属性 */
 #ifdef _WIN32
     #define ES_INLINE __forceinline
     #define ES_NOINLINE __declspec(noinline)
@@ -230,11 +226,10 @@
     #define ES_INLINE static inline
     #define ES_NOINLINE __attribute__((noinline))
     #define ES_PACKED __attribute__((packed))
-    #define ES_UNPACKED /* No-op */
+    #define ES_UNPACKED
     #define ES_ALIGNED(n) __attribute__((aligned(n)))
 #endif
 
-/* 链接器相关 */
 #ifdef _WIN32
     #define ES_LINKER_OUTPUT_FLAG "-o"
     #define ES_LINKER_CONSOLE_FLAG "-subsystem:console"
@@ -244,14 +239,13 @@
     #define ES_LINKER_CMD "ld.exe"
 #else
     #define ES_LINKER_OUTPUT_FLAG "-o"
-    #define ES_LINKER_CONSOLE_FLAG /* No direct equivalent */
+    #define ES_LINKER_CONSOLE_FLAG
     #define ES_LINKER_ENTRY_FLAG "-e"
     #define ES_LINKER_LIB_PATH_FLAG "-L"
     #define ES_LINKER_RUNTIME_LIBS "-lc -lm"
     #define ES_LINKER_CMD "ld"
 #endif
 
-/* 汇编器相关 */
 #ifdef _WIN32
     #define ES_ASM_FORMAT "win64"
     #define ES_ASM_OUTPUT_FLAG "-f"
@@ -262,4 +256,4 @@
     #define ES_ASM_CMD "nasm"
 #endif
 
-#endif /* PLATFORM_H */
+#endif

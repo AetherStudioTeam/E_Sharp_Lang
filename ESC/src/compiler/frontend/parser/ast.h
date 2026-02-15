@@ -1,12 +1,8 @@
-#ifndef AST_NODES_H
-#define AST_NODES_H
+#ifndef ES_AST_NODES_H
+#define ES_AST_NODES_H
 
 #include <stdbool.h>
 #include "../lexer/tokenizer.h"
-
-#ifdef _WIN32
-
-#endif
 
 typedef enum {
     AST_PROGRAM,

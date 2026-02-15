@@ -13,8 +13,7 @@ EsCompiler* es_compiler_create(const char* output_filename, EsTargetPlatform tar
     EsCompiler* compiler = (EsCompiler*)ES_MALLOC(sizeof(EsCompiler));
     if (!compiler) return NULL;
 
-    strncpy(compiler->output_filename, output_filename, sizeof(compiler->output_filename) - 1);
-    compiler->output_filename[sizeof(compiler->output_filename) - 1] = '\0';
+    ES_STRNCPY_SAFE(compiler->output_filename, output_filename);
 
     if (target == ES_TARGET_VM_BYTECODE || target == ES_TARGET_EO_OBJ) {
         compiler->output_file = fopen(output_filename, "wb");
@@ -78,17 +77,12 @@ void es_compiler_compile(EsCompiler* compiler, ASTNode* ast, TypeCheckContext* t
             break;
         case ES_TARGET_VM_BYTECODE: {
             es_vm_codegen_generate(ir_builder->module, &compiler->last_chunk);
-            printf("Generated %d bytes of bytecode, %d constants\n",
-                   compiler->last_chunk.count, compiler->last_chunk.constants.count);
 
-            
             fclose(compiler->output_file);
             compiler->output_file = NULL;
 
-            
             char output_filename[256];
-            strncpy(output_filename, compiler->output_filename, sizeof(output_filename) - 1);
-            output_filename[sizeof(output_filename) - 1] = '\0';
+            ES_STRNCPY(output_filename, compiler->output_filename, sizeof(output_filename));
             char* dot = strrchr(output_filename, '.');
             if (dot) {
                 strcpy(dot, ".ebc");
@@ -96,8 +90,7 @@ void es_compiler_compile(EsCompiler* compiler, ASTNode* ast, TypeCheckContext* t
                 strcat(output_filename, ".ebc");
             }
 
-            bool result = es_bytecode_generator_serialize_to_file(&compiler->last_chunk, output_filename);
-            printf("Serialization result: %s\n", result ? "success" : "failed");
+            es_bytecode_generator_serialize_to_file(&compiler->last_chunk, output_filename);
             break;
         }
         case ES_TARGET_EO_OBJ: {

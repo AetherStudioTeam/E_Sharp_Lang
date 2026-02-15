@@ -51,4 +51,6 @@ int parallel_compiler_link_results(ParallelCompiler* compiler, const char* final
 
 int parallel_compiler_collect_generic_types(ParallelCompiler* compiler);
 
+void find_runtime_obj(const char* obj_name, char* result, size_t size);
+
 #endif

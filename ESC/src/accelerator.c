@@ -45,7 +45,11 @@ double accelerator_mul_double(double a, double b) {
 }
 
 double accelerator_div_double(double a, double b) {
-    return b != 0 ? a / b : 0;
+    if (b == 0) {
+        ES_ERROR("Division by zero in accelerator_div_double");
+        return 0;
+    }
+    return a / b;
 }
 
 

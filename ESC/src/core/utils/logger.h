@@ -1,5 +1,5 @@
-#ifndef LOGGER_H
-#define LOGGER_H
+#ifndef ES_LOGGER_H
+#define ES_LOGGER_H
 
 #include <stdio.h>
 #include <stdarg.h>

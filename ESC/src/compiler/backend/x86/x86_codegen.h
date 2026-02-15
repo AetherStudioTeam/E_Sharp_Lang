@@ -4,62 +4,46 @@
 #include <stdio.h>
 #include "../../middle/ir/ir.h"
 
-
-
-
-
+#define X86_MAX_TEMP_LOCATIONS 256
+#define X86_MAX_REGISTERS 14
+#define X86_MAX_VAR_OFFSETS 100
+#define X86_MAX_VAR_NAME_LEN 64
 
 typedef enum {
-    TEMP_LOC_NONE,      
-    TEMP_LOC_REGISTER,  
-    TEMP_LOC_STACK      
+    TEMP_LOC_NONE,
+    TEMP_LOC_REGISTER,
+    TEMP_LOC_STACK
 } TempLocationType;
-
 
 typedef struct {
     TempLocationType type;
     union {
-        const char* reg;    
-        int offset;         
+        const char* reg;
+        int offset;
     };
 } TempLocation;
 
-
 typedef struct {
-    const char* name;           
-    int is_free;                
-    const char* content;        
+    const char* name;
+    int is_free;
+    const char* content;
 } RegisterState;
-
 
 typedef struct {
     EsIRFunction* current_func;
     EsIRModule* current_module;
-
-    
-    TempLocation temp_locations[256];
-
-    
-    RegisterState registers[14];
-
-    
+    TempLocation temp_locations[X86_MAX_TEMP_LOCATIONS];
+    RegisterState registers[X86_MAX_REGISTERS];
     int stack_size;
-    int temp_stack_base;  
-
-    
+    int temp_stack_base;
     struct {
-        char name[64];
+        char name[X86_MAX_VAR_NAME_LEN];
         int offset;
-    } var_offsets[100];
+    } var_offsets[X86_MAX_VAR_OFFSETS];
     int var_count;
     int next_var_offset;
-
-    
-    int temp_usage[256];
-    
-    
+    int temp_usage[X86_MAX_TEMP_LOCATIONS];
     void* regalloc;
-
 } CodegenContext;
 
 

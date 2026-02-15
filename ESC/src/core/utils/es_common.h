@@ -143,7 +143,11 @@ void es_free_checked(void* ptr, const char* file, int line);
     } \
     ES_STRCPY_S(dest, sizeof(dest), src); \
 } while(0)
-#define ES_STRNCPY(dest, src, n) strncpy(dest, src, n)
+#define ES_STRNCPY(dest, src, n) do { \
+    strncpy((dest), (src), (n)); \
+    (dest)[(n) - 1] = '\0'; \
+} while(0)
+#define ES_STRNCPY_SAFE(dest, src) ES_STRNCPY(dest, src, sizeof(dest))
 
 
     #define ES_ASSERT(condition) ((void)0)

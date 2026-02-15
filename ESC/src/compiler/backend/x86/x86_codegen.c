@@ -3,38 +3,28 @@
 #include "../../../core/utils/es_common.h"
 #include <string.h>
 
-
-
+#define X86_STACK_ALIGNMENT 16
+#define X86_MIN_STACK_SIZE 48
+#define X86_SHADOW_SPACE 32
+#define X86_MAX_TEMP_SPACE 256
+#define X86_REGISTER_COUNT 14
 
 static const char* g_register_names[] = {
-    "rax", "rbx", "rcx", "rdx", 
-    "rsi", "rdi", 
+    "rax", "rbx", "rcx", "rdx",
+    "rsi", "rdi",
     "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
 };
 
-static int g_register_count = 14;
-
-
-
-
-
+static int g_register_count = X86_REGISTER_COUNT;
 
 static int calculate_stack_size(EsIRFunction* func) {
-    
-    int stack_size = 32;  
-    
-    
-    
-    
-    int var_count = func->param_count;
+    int stack_size = X86_SHADOW_SPACE;
     int max_temp_idx = 0;
-    
-    
+
     EsIRBasicBlock* block = func->entry_block;
     while (block) {
         EsIRInst* inst = block->first_inst;
         while (inst) {
-            
             for (int i = 0; i < inst->operand_count; i++) {
                 if (inst->operands[i].type == ES_IR_VALUE_TEMP) {
                     int idx = inst->operands[i].data.index;
@@ -49,20 +39,15 @@ static int calculate_stack_size(EsIRFunction* func) {
         }
         block = block->next;
     }
-    
-    
+
     int temp_space = (max_temp_idx + 1) * 8;
-    if (temp_space > 256) temp_space = 256;  
-    
-    
+    if (temp_space > X86_MAX_TEMP_SPACE) temp_space = X86_MAX_TEMP_SPACE;
+
     stack_size += func->param_count * 8 + temp_space;
-    
-    
-    stack_size = (stack_size + 15) & ~15;
-    
-    
-    if (stack_size < 48) stack_size = 48;
-    
+    stack_size = (stack_size + (X86_STACK_ALIGNMENT - 1)) & ~(X86_STACK_ALIGNMENT - 1);
+
+    if (stack_size < X86_MIN_STACK_SIZE) stack_size = X86_MIN_STACK_SIZE;
+
     return stack_size;
 }
 

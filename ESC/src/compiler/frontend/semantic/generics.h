@@ -1,5 +1,5 @@
-#ifndef GENERICS_H
-#define GENERICS_H
+#ifndef ES_GENERICS_H
+#define ES_GENERICS_H
 
 #include "symbol_table.h"
 #include "../parser/ast.h"

@@ -1,5 +1,5 @@
-#ifndef PREPROCESSOR_H
-#define PREPROCESSOR_H
+#ifndef ES_PREPROCESSOR_H
+#define ES_PREPROCESSOR_H
 
 #include "../../core/utils/es_common.h"
 

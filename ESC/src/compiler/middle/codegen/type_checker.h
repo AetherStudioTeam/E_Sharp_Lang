@@ -1,5 +1,5 @@
-#ifndef TYPE_CHECK_H
-#define TYPE_CHECK_H
+#ifndef ES_TYPE_CHECK_H
+#define ES_TYPE_CHECK_H
 #include "../../frontend/parser/ast.h"
 
 

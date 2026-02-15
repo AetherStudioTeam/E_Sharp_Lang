@@ -66,65 +66,63 @@ typedef struct EOWriter {
     uint16_t flags;
 } EOWriter;
 
+static bool allocate_writer_buffers(EOWriter* writer) {
+    writer->text_capacity = INITIAL_CAPACITY;
+    writer->text = (uint8_t*)malloc(writer->text_capacity);
+    if (!writer->text) return false;
+
+    writer->data_capacity = INITIAL_CAPACITY;
+    writer->data = (uint8_t*)malloc(writer->data_capacity);
+    if (!writer->data) return false;
+
+    writer->rodata_capacity = INITIAL_CAPACITY;
+    writer->rodata = (uint8_t*)malloc(writer->rodata_capacity);
+    if (!writer->rodata) return false;
+
+    writer->sym_capacity = 64;
+    writer->symbols = (EOSymbol*)calloc(writer->sym_capacity, sizeof(EOSymbol));
+    if (!writer->symbols) return false;
+
+    writer->text_relocs.capacity = 16;
+    writer->text_relocs.relocs = (EORelocation*)calloc(writer->text_relocs.capacity, sizeof(EORelocation));
+    if (!writer->text_relocs.relocs) return false;
+
+    writer->data_relocs.capacity = 16;
+    writer->data_relocs.relocs = (EORelocation*)calloc(writer->data_relocs.capacity, sizeof(EORelocation));
+    if (!writer->data_relocs.relocs) return false;
+
+    writer->rodata_relocs.capacity = 16;
+    writer->rodata_relocs.relocs = (EORelocation*)calloc(writer->rodata_relocs.capacity, sizeof(EORelocation));
+    if (!writer->rodata_relocs.relocs) return false;
+
+    writer->bss_relocs.capacity = 16;
+    writer->bss_relocs.relocs = (EORelocation*)calloc(writer->bss_relocs.capacity, sizeof(EORelocation));
+    if (!writer->bss_relocs.relocs) return false;
+
+    writer->string_capacity = STRING_INITIAL_CAPACITY;
+    writer->strings = (char*)malloc(writer->string_capacity);
+    if (!writer->strings) return false;
+    writer->strings[0] = '\0';
+    writer->string_size = 1;
+
+    return true;
+}
+
 EOWriter* eo_writer_create(void) {
     EOWriter* writer = (EOWriter*)calloc(1, sizeof(EOWriter));
     if (!writer) return NULL;
 
-    
-    writer->text_capacity = INITIAL_CAPACITY;
-    writer->text = (uint8_t*)malloc(writer->text_capacity);
-    if (!writer->text) goto fail;
+    if (!allocate_writer_buffers(writer)) {
+        eo_writer_destroy(writer);
+        return NULL;
+    }
 
-    
-    writer->data_capacity = INITIAL_CAPACITY;
-    writer->data = (uint8_t*)malloc(writer->data_capacity);
-    if (!writer->data) goto fail;
-
-    
-    writer->rodata_capacity = INITIAL_CAPACITY;
-    writer->rodata = (uint8_t*)malloc(writer->rodata_capacity);
-    if (!writer->rodata) goto fail;
-
-    
-    writer->sym_capacity = 64;
-    writer->symbols = (EOSymbol*)calloc(writer->sym_capacity, sizeof(EOSymbol));
-    if (!writer->symbols) goto fail;
-
-    
-    writer->text_relocs.capacity = 16;
-    writer->text_relocs.relocs = (EORelocation*)calloc(writer->text_relocs.capacity, sizeof(EORelocation));
-    if (!writer->text_relocs.relocs) goto fail;
-
-    writer->data_relocs.capacity = 16;
-    writer->data_relocs.relocs = (EORelocation*)calloc(writer->data_relocs.capacity, sizeof(EORelocation));
-    if (!writer->data_relocs.relocs) goto fail;
-
-    writer->rodata_relocs.capacity = 16;
-    writer->rodata_relocs.relocs = (EORelocation*)calloc(writer->rodata_relocs.capacity, sizeof(EORelocation));
-    if (!writer->rodata_relocs.relocs) goto fail;
-
-    writer->bss_relocs.capacity = 16;
-    writer->bss_relocs.relocs = (EORelocation*)calloc(writer->bss_relocs.capacity, sizeof(EORelocation));
-    if (!writer->bss_relocs.relocs) goto fail;
-
-    
-    writer->string_capacity = STRING_INITIAL_CAPACITY;
-    writer->strings = (char*)malloc(writer->string_capacity);
-    if (!writer->strings) goto fail;
-    writer->strings[0] = '\0';
-    writer->string_size = 1;  
-
-    
     writer->text_align = DEFAULT_CODE_ALIGN;
     writer->data_align = DEFAULT_DATA_ALIGN;
     writer->rodata_align = DEFAULT_RODATA_ALIGN;
     writer->bss_align = DEFAULT_BSS_ALIGN;
 
     return writer;
-
-fail:
-    eo_writer_destroy(writer);
-    return NULL;
 }
 
 void eo_writer_destroy(EOWriter* writer) {

@@ -1,5 +1,5 @@
-#ifndef IR_OPTIMIZER_H
-#define IR_OPTIMIZER_H
+#ifndef ES_IR_OPTIMIZER_H
+#define ES_IR_OPTIMIZER_H
 
 #include "ir.h"
 #include <stdbool.h>
