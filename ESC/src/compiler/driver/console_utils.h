@@ -1,5 +1,5 @@
-#ifndef CONSOLE_UTILS_H
-#define CONSOLE_UTILS_H
+#ifndef ES_CONSOLE_UTILS_H
+#define ES_CONSOLE_UTILS_H
 
 
 #define ES_COL_RESET "\033[0m"

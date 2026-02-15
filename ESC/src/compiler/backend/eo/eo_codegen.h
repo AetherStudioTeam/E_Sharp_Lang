@@ -1,5 +1,5 @@
-#ifndef EO_CODEGEN_H
-#define EO_CODEGEN_H
+#ifndef ES_EO_CODEGEN_H
+#define ES_EO_CODEGEN_H
 
 #include "../../middle/ir/ir.h"
 #include "../../../tools/eo_writer.h"

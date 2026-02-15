@@ -260,6 +260,14 @@ class SourceScanner:
                     for source in shared_dir.rglob(f'*{ext}'):
                         if not self.should_exclude(source):
                             sources.append(source)
+            
+            
+            arklink_dir = Path('../ArkLink/src')
+            if arklink_dir.exists():
+                for ext in self.source_exts:
+                    for source in arklink_dir.rglob(f'*{ext}'):
+                        if not self.should_exclude(source):
+                            sources.append(source)
         
         return sorted(sources)
     

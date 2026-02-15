@@ -4,23 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-
-
-
-
-
-
-
-
-#ifndef NULL
-#define NULL ((void*)0)
-#endif
-
-
-
-
-
-
 void* es_memcpy(void* dest, const void* src, size_t n);
 void* es_memset(void* s, int c, size_t n);
 void* es_memmove(void* dest, const void* src, size_t n);

@@ -225,11 +225,6 @@ EsProject* es_proj_load(const char* proj_file) {
         return NULL;
     }
 
-    if (!project) {
-        ES_FREE(content);
-        return NULL;
-    }
-
     if (project->project_root) {
         ES_FREE(project->project_root);
         project->project_root = NULL;

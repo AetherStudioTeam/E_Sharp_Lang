@@ -1,5 +1,5 @@
-#ifndef SMART_PTR_H
-#define SMART_PTR_H
+#ifndef ES_SMART_PTR_H
+#define ES_SMART_PTR_H
 
 #include "../utils/logger.h"
 #include <stdatomic.h>

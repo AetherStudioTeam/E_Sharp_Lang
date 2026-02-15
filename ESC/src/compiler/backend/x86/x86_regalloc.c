@@ -218,7 +218,7 @@ void liveness_analysis_run(LivenessAnalysis* analysis, EsIRFunction* func) {
         
         
         
-        for (int i = 0; i < global_inst_idx && i < MAX_INSTS; i++) {
+        for (int i = 0; i < global_inst_idx && i < X86_MAX_INSTRUCTIONS; i++) {
             liveness_init_set(&analysis->inst_live[i]);
             
             for (int temp_idx = 0; temp_idx < 256; temp_idx++) {
@@ -247,7 +247,7 @@ void liveness_analysis_run(LivenessAnalysis* analysis, EsIRFunction* func) {
             if (temp_def_pos[i] >= 0) temp_with_def++;
             if (temp_use_count[i] > 0) temp_with_use++;
         }
-        for (int i = 0; i < global_inst_idx && i < MAX_INSTS; i++) {
+        for (int i = 0; i < global_inst_idx && i < X86_MAX_INSTRUCTIONS; i++) {
             for (int j = 0; j < 256; j++) {
                 if (liveness_is_live(&analysis->inst_live[i], j)) {
                     total_live++;
@@ -436,18 +436,17 @@ RegAllocResult* regalloc_allocate(ConflictGraph* graph) {
         int temp_idx = node->temp_idx;
         
         
-        int used_colors[NUM_ALLOCABLE_REGS] = {0};
-        
+        int used_colors[X86_NUM_ALLOCABLE_REGS] = {0};
+
         for (int j = 0; j < node->neighbor_count; j++) {
             ConflictNode* neighbor = node->neighbors[j];
-            if (neighbor->color >= 0 && neighbor->color < NUM_ALLOCABLE_REGS) {
+            if (neighbor->color >= 0 && neighbor->color < X86_NUM_ALLOCABLE_REGS) {
                 used_colors[neighbor->color] = 1;
             }
         }
-        
-        
+
         int assigned = 0;
-        for (int c = 0; c < NUM_ALLOCABLE_REGS; c++) {
+        for (int c = 0; c < X86_NUM_ALLOCABLE_REGS; c++) {
             if (!used_colors[c]) {
                 node->color = c;
                 result->temp_to_reg[temp_idx] = c;
@@ -489,16 +488,16 @@ void regalloc_result_destroy(RegAllocResult* result) {
 }
 
 const char* regalloc_get_reg_name(RegAllocResult* result, int temp_idx) {
-    if (temp_idx < 0 || temp_idx >= 256) return NULL;
-    
+    if (temp_idx < 0 || temp_idx >= X86_MAX_TEMP_LOCATIONS) return NULL;
+
     int reg_idx = result->temp_to_reg[temp_idx];
-    if (reg_idx < 0 || reg_idx >= NUM_ALLOCABLE_REGS) return NULL;
+    if (reg_idx < 0 || reg_idx >= X86_NUM_ALLOCABLE_REGS) return NULL;
     
     return g_allocable_regs[reg_idx];
 }
 
 int regalloc_get_stack_offset(RegAllocResult* result, int temp_idx) {
-    if (temp_idx < 0 || temp_idx >= 256) return -1;
+    if (temp_idx < 0 || temp_idx >= X86_MAX_TEMP_LOCATIONS) return -1;
     return result->temp_to_stack[temp_idx];
 }
 

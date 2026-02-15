@@ -1,5 +1,5 @@
-#ifndef STRING_OPTIMIZER_H
-#define STRING_OPTIMIZER_H
+#ifndef ES_STRING_OPTIMIZER_H
+#define ES_STRING_OPTIMIZER_H
 
 #include <stddef.h>
 

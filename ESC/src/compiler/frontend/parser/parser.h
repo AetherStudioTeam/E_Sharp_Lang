@@ -1,5 +1,5 @@
-#ifndef PARSER_H
-#define PARSER_H
+#ifndef ES_PARSER_H
+#define ES_PARSER_H
 
 #include "../lexer/tokenizer.h"
 #include "ast.h"

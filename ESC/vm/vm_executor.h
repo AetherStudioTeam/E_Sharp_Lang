@@ -1,5 +1,5 @@
-#ifndef VM_EXECUTOR_H
-#define VM_EXECUTOR_H
+#ifndef ES_VM_EXECUTOR_H
+#define ES_VM_EXECUTOR_H
 
 #include "vm.h"
 #include "bytecode.h"

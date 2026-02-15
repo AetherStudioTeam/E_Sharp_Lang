@@ -29,7 +29,8 @@
       "src/lsp",
       "src/lsp/protocol",
       "src/lsp/handlers",
-      "src/lsp/features"
+      "src/lsp/features",
+      "../ArkLink/include"
     ]
   },
   "compiler": {
@@ -69,7 +70,7 @@
     "header_extensions": [
       ".h"
     ],
-    "exclude_patterns": ["test_*.c", "*_test.c", "**/standalone/*.c", "test*.c"]
+    "exclude_patterns": ["test_*.c", "*_test.c", "**/standalone/*.c", "test*.c", "**/cli/main.c"]
   },
   "features": {
     "colored_output": true,

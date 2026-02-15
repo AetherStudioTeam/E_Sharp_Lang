@@ -1,5 +1,5 @@
-#ifndef EO_WRITER_H
-#define EO_WRITER_H
+#ifndef ES_EO_WRITER_H
+#define ES_EO_WRITER_H
 
 #include <stdint.h>
 #include <stdbool.h>
