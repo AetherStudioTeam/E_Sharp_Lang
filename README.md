@@ -89,12 +89,9 @@ python build.py
 
 # 发布构建（优化）
 python build.py --release
-
-# 运行测试
-python build.py --test
 ```
 
-### 编写你的第一个 E# 程序
+### 编写你的第一个 E# 程序 或 [学习文档](./docs/doc/README.md)
 
 创建 `hello.es` 文件：
 
@@ -214,7 +211,7 @@ E_Sharp_Lang/
 - 新增功能请附带测试用例
 - 遵循现有代码风格
 
-[查看贡献指南](./CONTRIBUTING.md)
+[查看贡献指南](./DevStand.md)
 
 [提交 Bug 报告](https://github.com/AetherStudioTeam/E_Sharp_Lang/issues/new?template=bug_report.md)
 
