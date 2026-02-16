@@ -288,6 +288,4 @@ copies or substantial portions of the Software.
 
 **Made with ❤️ by Aether Studio**
 
-> 在此我特地...感谢（咬牙切齿）：BYD yukifuri！！！！！（气）
-
 </div>
